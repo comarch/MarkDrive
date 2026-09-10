@@ -13,6 +13,7 @@ export type StringKey =
   | "header.saveShort"
   | "header.export"
   | "header.outline"
+  | "rich.toggle"
   | "header.templates"
   | "header.graph"
   | "header.reviewQueue"
@@ -65,6 +66,7 @@ header.save|Save to Google Drive (Ctrl + S)|Zapisz na Google Drive (Ctrl + S)
 header.saveShort|Save|Zapisz
 header.export|Export (Markdown, HTML, PDF)|Eksport (Markdown, HTML, PDF)
 header.outline|Toggle document outline|Przełącz konspekt dokumentu
+rich.toggle|Rich text view|Widok tekstu sformatowanego
 header.templates|Templates and snippets|Szablony i fragmenty
 header.graph|Folder link graph|Graf linków folderu
 header.reviewQueue|Documents awaiting review|Dokumenty oczekujące na recenzję

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
-import { EditorState, Extension } from "@codemirror/state";
+import { Compartment, EditorState, Extension } from "@codemirror/state";
 import {
   EditorView,
   keymap,
@@ -35,6 +35,11 @@ import { SelectionInfo } from "../../types/editor";
 import { extractImageFiles } from "../../utils/clipboardFiles";
 import { tsvToMarkdownTable } from "../../utils/tableUtils";
 import { lintLinks, lintMarkdown } from "../../services/lint";
+import { richViewExtension } from "./richView";
+
+// The WYSIWYG overlay mounts through a compartment, so toggling the
+// mode reconfigures the live editor instead of rebuilding it.
+const richViewCompartment = new Compartment();
 
 // Quality checks run as native editor diagnostics; the delay keeps
 // typing responsive.
@@ -80,6 +85,7 @@ interface CodeMirrorEditorProps {
   onImagePaste?: (files: File[]) => void;
   onTableCursorChange?: (context: TableCursorContext | null) => void;
   commentedLines?: number[];
+  richView?: boolean;
 }
 
 export const CodeMirrorEditor = forwardRef<
@@ -96,6 +102,7 @@ export const CodeMirrorEditor = forwardRef<
       onSelectionChange,
       onImagePaste,
       onTableCursorChange,
+      richView = false,
     },
     ref,
   ) => {
@@ -298,6 +305,10 @@ export const CodeMirrorEditor = forwardRef<
           base: markdownLanguage,
           codeLanguages: languages,
         }),
+        // Mounted empty at first; the richView effect below configures
+        // it on mount and on every toggle, so the editor is never
+        // rebuilt just to switch modes.
+        richViewCompartment.of([]),
         baseTheme,
         keymap.of([
           indentWithTab,
@@ -408,6 +419,18 @@ export const CodeMirrorEditor = forwardRef<
         view.destroy();
       };
     }, [isDark, fontSize]); // Re-create if theme or font size changes
+
+    // Toggle the WYSIWYG overlay on the live editor without losing
+    // cursor, selection, or undo history.
+    useEffect(() => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        effects: richViewCompartment.reconfigure(
+          richView ? richViewExtension : [],
+        ),
+      });
+    }, [richView]);
 
     // Update document if value changed externally. Only the differing middle
     // is replaced, so cursors and undo history outside the change survive.

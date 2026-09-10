@@ -23,6 +23,7 @@ import {
   LayoutTemplate,
   Network,
   Presentation,
+  Type,
 } from "lucide-react";
 import { DriveUser, SaveStatus, DriveFileMetadata } from "../../types/drive";
 import {
@@ -59,6 +60,8 @@ interface AppHeaderProps {
   onOpenExportModal: () => void;
   onToggleOutline: () => void;
   isOutlineOpen: boolean;
+  richView: boolean;
+  onToggleRichView: () => void;
   onOpenHistory?: () => void;
   isHistoryOpen?: boolean;
   onOpenProperties?: () => void;
@@ -94,6 +97,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenExportModal,
   onToggleOutline,
   isOutlineOpen,
+  richView,
+  onToggleRichView,
   onOpenHistory,
   isHistoryOpen = false,
   onOpenProperties,
@@ -363,6 +368,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </button>
 
         <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-0.5" />
+
+        {/* WYSIWYG rich text view toggle */}
+        <button
+          onClick={onToggleRichView}
+          title={t("rich.toggle")}
+          aria-label={t("rich.toggle")}
+          aria-pressed={richView}
+          className={`p-1.5 rounded-lg transition ${
+            richView
+              ? "bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400"
+              : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+          }`}
+        >
+          <Type className="w-4 h-4" />
+        </button>
 
         {/* Outline / TOC button */}
         <button
