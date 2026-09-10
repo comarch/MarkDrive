@@ -44,7 +44,10 @@ export const createCompanion = (overrides = {}) => {
   };
 
   const server = http.createServer(async (req, res) => {
-    const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+    const url = new URL(
+      req.url ?? "/",
+      `http://${req.headers.host ?? "localhost"}`,
+    );
     const path = url.pathname;
     const send = (status, body, type = "application/json") => {
       res.writeHead(status, { "Content-Type": type });
@@ -81,7 +84,8 @@ export const createCompanion = (overrides = {}) => {
 
     // AI proxy: the Gemini generateContent contract, key stays server side.
     if (req.method === "POST" && path === "/v1/ai/generate") {
-      if (!aiProxy.isEnabled()) return send(503, { error: "AI proxy is not configured." });
+      if (!aiProxy.isEnabled())
+        return send(503, { error: "AI proxy is not configured." });
       const body = await readBody();
       if (body === null) return send(400, { error: "Invalid JSON body." });
       const result = await aiProxy.generate(body);
@@ -95,7 +99,9 @@ export const createCompanion = (overrides = {}) => {
       const channelId = req.headers["x-goog-channel-id"];
       const verified = driveWatch.verifyNotification(String(token ?? ""));
       if (!verified) {
-        audit.record("drive.notify.rejected", { channelId: String(channelId ?? "unknown") });
+        audit.record("drive.notify.rejected", {
+          channelId: String(channelId ?? "unknown"),
+        });
         return send(403, { error: "Unknown webhook token." });
       }
       const fileId = driveWatch.fileIdForChannel(String(channelId ?? ""));
@@ -112,24 +118,42 @@ export const createCompanion = (overrides = {}) => {
     // Register a changes.watch channel for a file. The client supplies
     // its own short-lived access token; the companion never persists it.
     if (req.method === "POST" && path === "/v1/drive/watch") {
-      if (!driveWatch.isEnabled()) return send(503, { error: "Drive webhooks are not configured." });
+      if (!driveWatch.isEnabled())
+        return send(503, { error: "Drive webhooks are not configured." });
       const body = await readBody();
-      if (body === null || typeof body.fileId !== "string" || typeof body.accessToken !== "string") {
+      if (
+        body === null ||
+        typeof body.fileId !== "string" ||
+        typeof body.accessToken !== "string"
+      ) {
         return send(400, { error: "fileId and accessToken are required." });
       }
       const result = await driveWatch.register(body.fileId, body.accessToken);
       if (result.ok) {
-        audit.record("drive.watch.registered", { fileId: body.fileId, expiresAt: result.expiresAt });
-        return send(200, { channelId: result.channelId, expiresAt: result.expiresAt });
+        audit.record("drive.watch.registered", {
+          fileId: body.fileId,
+          expiresAt: result.expiresAt,
+        });
+        return send(200, {
+          channelId: result.channelId,
+          expiresAt: result.expiresAt,
+        });
       }
-      audit.record("drive.watch.failed", { fileId: body.fileId, error: result.error });
+      audit.record("drive.watch.failed", {
+        fileId: body.fileId,
+        error: result.error,
+      });
       return send(result.status ?? 502, { error: result.error });
     }
 
     // Search index: clients push documents, queries return ranked hits.
     if (req.method === "POST" && path === "/v1/search/index") {
       const body = await readBody();
-      if (body === null || typeof body.fileId !== "string" || typeof body.content !== "string") {
+      if (
+        body === null ||
+        typeof body.fileId !== "string" ||
+        typeof body.content !== "string"
+      ) {
         return send(400, { error: "fileId and content are required." });
       }
       search.index(body.fileId, {
@@ -147,7 +171,8 @@ export const createCompanion = (overrides = {}) => {
     // Integrations fan-out (Slack ships built-in; Teams, Jira, Linear,
     // and git sync plug in at the deployment boundary).
     if (req.method === "POST" && path === "/v1/integrations/notify") {
-      if (!notifier.isEnabled()) return send(503, { error: "Integrations are not configured." });
+      if (!notifier.isEnabled())
+        return send(503, { error: "Integrations are not configured." });
       const body = await readBody();
       if (body === null || typeof body.event !== "string") {
         return send(400, { error: "event is required." });
@@ -175,7 +200,10 @@ export const createCompanion = (overrides = {}) => {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on("upgrade", (req, socket, head) => {
-    const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+    const url = new URL(
+      req.url ?? "/",
+      `http://${req.headers.host ?? "localhost"}`,
+    );
     const room = url.searchParams.get("room") ?? "";
     if (room.length === 0) {
       socket.destroy();
@@ -201,7 +229,8 @@ export const createCompanion = (overrides = {}) => {
           if (isBinary) return;
           try {
             const message = JSON.parse(data.toString());
-            if (message?.type === "ping") ws.send(JSON.stringify({ type: "pong" }));
+            if (message?.type === "ping")
+              ws.send(JSON.stringify({ type: "pong" }));
           } catch {
             // Ignore malformed frames.
           }
@@ -224,7 +253,18 @@ export const createCompanion = (overrides = {}) => {
     });
   };
 
-  return { server, audit, search, notifier, aiProxy, driveWatch, relayState, eventRooms, notifyRoom, close };
+  return {
+    server,
+    audit,
+    search,
+    notifier,
+    aiProxy,
+    driveWatch,
+    relayState,
+    eventRooms,
+    notifyRoom,
+    close,
+  };
 };
 
 // Entry point: bind the listener when run as a script.

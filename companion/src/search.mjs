@@ -23,7 +23,12 @@ export const createSearchIndex = (persistPath = "") => {
         if (trimmed.length === 0) continue;
         try {
           const entry = JSON.parse(trimmed);
-          if (entry?.fileId && typeof entry.name === "string" && entry.termCounts && typeof entry.termCounts === "object") {
+          if (
+            entry?.fileId &&
+            typeof entry.name === "string" &&
+            entry.termCounts &&
+            typeof entry.termCounts === "object"
+          ) {
             documents.set(entry.fileId, entry);
           }
         } catch {
@@ -40,8 +45,9 @@ export const createSearchIndex = (persistPath = "") => {
     try {
       writeFileSync(
         persistPath,
-        [...documents.values()].map((entry) => JSON.stringify(entry)).join("\n") +
-          "\n",
+        [...documents.values()]
+          .map((entry) => JSON.stringify(entry))
+          .join("\n") + "\n",
       );
     } catch {
       // Persistence failures never break the request path.

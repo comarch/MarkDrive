@@ -34,4 +34,6 @@ export interface AppSettings {
   richView: boolean;
   /** Feature-flagged AI assistant configuration; off by default. */
   ai: AISettings;
+  /** Optional self-hosted companion service base URL; empty disables. */
+  companionUrl: string;
 }

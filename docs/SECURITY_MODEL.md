@@ -24,13 +24,13 @@ An organization may deploy the optional, self-hosted companion service
 (`companion/`, distributed as a container) next to the SPA. It provides
 exactly four capabilities, each disabled unless configured:
 
-| Capability        | Route                          | Configuration                    |
-| ----------------- | ------------------------------ | -------------------------------- |
-| CRDT relay        | `/ws?room=<fileId>`            | none (always on)                 |
-| Drive webhooks    | `/v1/drive/watch`, `/v1/drive/notify` | `PUBLIC_URL`, `DRIVE_WEBHOOK_SECRET` |
-| AI proxy          | `/v1/ai/generate`              | `GEMINI_API_KEY`                 |
-| Search index      | `/v1/search`, `/v1/search/index` | `SEARCH_INDEX_PATH` (optional) |
-| Integrations      | `/v1/integrations/notify`      | `SLACK_WEBHOOK_URL`              |
+| Capability     | Route                                 | Configuration                        |
+| -------------- | ------------------------------------- | ------------------------------------ |
+| CRDT relay     | `/ws?room=<fileId>`                   | none (always on)                     |
+| Drive webhooks | `/v1/drive/watch`, `/v1/drive/notify` | `PUBLIC_URL`, `DRIVE_WEBHOOK_SECRET` |
+| AI proxy       | `/v1/ai/generate`                     | `GEMINI_API_KEY`                     |
+| Search index   | `/v1/search`, `/v1/search/index`      | `SEARCH_INDEX_PATH` (optional)       |
+| Integrations   | `/v1/integrations/notify`             | `SLACK_WEBHOOK_URL`                  |
 
 Trust rules for the companion:
 

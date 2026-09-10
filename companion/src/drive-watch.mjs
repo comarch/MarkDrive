@@ -25,7 +25,11 @@ export const createDriveWatch = (
 
   const register = async (fileId, accessToken) => {
     if (!isEnabled()) {
-      return { ok: false, status: 503, error: "Drive webhooks are not configured." };
+      return {
+        ok: false,
+        status: 503,
+        error: "Drive webhooks are not configured.",
+      };
     }
     const channelId = `mq-${fileId}-${Date.now().toString(36)}`;
     try {
@@ -46,7 +50,11 @@ export const createDriveWatch = (
         },
       );
       if (!response.ok) {
-        return { ok: false, status: response.status, error: `Drive rejected the watch: ${response.status}` };
+        return {
+          ok: false,
+          status: response.status,
+          error: `Drive rejected the watch: ${response.status}`,
+        };
       }
       const payload = await response.json().catch(() => ({}));
       const expiresAt = payload.expiration
@@ -59,13 +67,18 @@ export const createDriveWatch = (
       channelByFile.set(fileId, channelId);
       return { ok: true, channelId, expiresAt };
     } catch (error) {
-      return { ok: false, error: `Drive watch request failed: ${String(error)}` };
+      return {
+        ok: false,
+        error: `Drive watch request failed: ${String(error)}`,
+      };
     }
   };
 
-  const verifyNotification = (token) => token === webhookSecret && webhookSecret.length > 0;
+  const verifyNotification = (token) =>
+    token === webhookSecret && webhookSecret.length > 0;
 
-  const fileIdForChannel = (channelId) => channels.get(channelId)?.fileId ?? null;
+  const fileIdForChannel = (channelId) =>
+    channels.get(channelId)?.fileId ?? null;
 
   // Renewal: re-register watches with the tokens kept for them. Tokens
   // expire too, so a failed renewal drops the watch instead of looping.
@@ -120,7 +133,8 @@ export const createDriveWatch = (
     },
     verifyNotification,
     fileIdForChannel,
-    channels: () => [...channels.entries()].map(([id, entry]) => ({ id, ...entry })),
+    channels: () =>
+      [...channels.entries()].map(([id, entry]) => ({ id, ...entry })),
     stop,
   };
 };

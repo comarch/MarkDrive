@@ -154,3 +154,57 @@ Comments are saved directly into the Google Drive file's discussion thread using
 - **Create comment**: `POST /drive/v3/files/<FILE_ID>/comments?fields=*` with `{ content, quotedFileContent, anchor }`
 - **Replies & Resolve**: `POST /drive/v3/files/<FILE_ID>/comments/<COMMENT_ID>/replies?fields=*` with `{ content, action: 'resolve' }`
 - Comments created in the production integration are Google Drive comments attached to the file resource.
+
+---
+
+## 7. Optional companion service
+
+Real-time co-editing, Drive change notifications, server-side AI access,
+and organization-wide search need a relay that a static page cannot
+provide. The `companion/` directory ships this as one optional,
+self-hosted service. It is never required: a deployment without it keeps
+every core feature, and the SPA never depends on it.
+
+### 7.1 Deploy the container
+
+```
+docker compose up -d
+```
+
+The compose file runs the SPA behind nginx and the companion next to it,
+with nginx routing `/v1/`, `/ws`, and `/events` to the service. Give the
+companion a data volume; it writes a JSONL audit log and search index
+there.
+
+### 7.2 Configuration
+
+| Variable               | Effect                                                   |
+| ---------------------- | -------------------------------------------------------- |
+| `PUBLIC_URL`           | Public HTTPS base Drive webhooks call back into          |
+| `DRIVE_WEBHOOK_SECRET` | Shared secret the SPA sends when registering watches     |
+| `GEMINI_API_KEY`       | Enables the AI proxy; the key stays server side          |
+| `GEMINI_MODEL`         | Model name for the AI proxy (default `gemini-2.0-flash`) |
+| `SLACK_WEBHOOK_URL`    | Enables integration notifications                        |
+| `AUDIT_LOG_PATH`       | JSONL audit log file                                     |
+| `SEARCH_INDEX_PATH`    | JSONL search index file                                  |
+| `RETENTION_DAYS`       | Compliance retention window for audit entries            |
+
+### 7.3 User-facing setup
+
+Authors enter the companion base URL once in settings (for example
+`https://markquire.example.invalid`). The app then joins editing rooms for
+open Drive files, registers change watches with its own short-lived
+OAuth token, pushes saved documents into the search index, and forwards
+review activity to the configured integrations.
+
+### 7.4 Boundaries
+
+- The client's OAuth token is used once, for a watch registration, and
+  never stored by the service.
+- Webhook callbacks without the shared secret are rejected and audited.
+- Relay documents live in memory only; Drive remains the durability
+  layer.
+- The search index stores document content outside Drive, so it exists
+  only in your organization's own deployment.
+- Administrators export the audit log from `/v1/audit/export` and read
+  retention statistics from `/v1/audit/stats`.

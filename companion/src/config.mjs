@@ -11,7 +11,7 @@ export const createConfig = (overrides = {}) => {
   return {
     port: Number(value("PORT", 8787)),
     // Public HTTPS base Drive calls back into, for example
-    // https://markquire.example.com
+    // https://markquire.example.invalid
     publicUrl: String(value("PUBLIC_URL", "")),
     // Shared secret between this service and the SPA's webhook tokens.
     driveWebhookSecret: String(value("DRIVE_WEBHOOK_SECRET", "")),

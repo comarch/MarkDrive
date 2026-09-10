@@ -12,7 +12,10 @@ const AUDIT_PATH = "./.tmp-audit.jsonl";
 test("search ranking: term frequency with a name boost", () => {
   rmSync(SEARCH_PATH, { force: true });
   const index = createSearchIndex(SEARCH_PATH);
-  index.index("a", { name: "Plain", content: "engine engine engine engine engine engine engine engine basics" });
+  index.index("a", {
+    name: "Plain",
+    content: "engine engine engine engine engine engine engine engine basics",
+  });
   index.index("b", { name: "Engine Guide", content: "engine basics" });
   const results = index.query("engine");
   // Eight body hits beat one body hit plus the name boost.
@@ -85,8 +88,22 @@ test("notifier delivers to slack and records outcomes", async () => {
       return new Response("ok", { status: delivered.length === 1 ? 200 : 500 });
     },
   );
-  assert.equal(await notifier.notify({ event: "review.comment", fileId: "f", text: "hello" }), true);
-  assert.equal(await notifier.notify({ event: "review.comment", fileId: "f", text: "hello" }), false);
+  assert.equal(
+    await notifier.notify({
+      event: "review.comment",
+      fileId: "f",
+      text: "hello",
+    }),
+    true,
+  );
+  assert.equal(
+    await notifier.notify({
+      event: "review.comment",
+      fileId: "f",
+      text: "hello",
+    }),
+    false,
+  );
   assert.deepEqual(delivered[0].body, { text: "hello" });
   assert.equal(audit.stats().byEvent["integrations.delivered"], 1);
   assert.equal(audit.stats().byEvent["integrations.failed"], 1);

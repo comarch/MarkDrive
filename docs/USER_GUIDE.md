@@ -231,6 +231,29 @@ reviewer comment as a suggested patch you can accept in one click.
 Results can be inserted at the cursor, replace the document, or go to the
 clipboard. In builds without the assistant, the button never appears.
 
+## Edit together in real time (optional)
+
+When your deployment runs the companion service and you set its URL in
+settings, opening a Drive document joins a live editing room:
+
+- everyone's keystrokes merge through the room, so two authors type in
+  one document without conflict dialogs; Drive stays the saved copy
+  through the usual autosave;
+- the header shows who is present, one avatar per author;
+- when the document changes on Drive from outside your session, a banner
+  offers to reload it - nothing refreshes silently.
+
+The companion is optional. Without it, MarkQuire behaves exactly as
+before.
+
+## Search your organization's documents (optional)
+
+With the companion configured, every saved document joins your
+organization's search index. The file browser gains a search field:
+type a query, press Enter, and ranked results from every indexed
+document appear - including files outside the current folder. The index
+lives only in your organization's own companion deployment.
+
 ## Settings
 
 The settings dialog controls:

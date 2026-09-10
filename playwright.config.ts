@@ -20,14 +20,26 @@ export default defineConfig({
     screenshot: "off",
     video: "off",
   },
-  webServer: {
-    // The e2e dev server builds with the AI assistant included, so its
-    // panel is testable. The production artifact is still built without
-    // the flag (see docs/SECURITY_MODEL.md).
-    command: "VITE_ENABLE_AI=1 npm run dev -- --port 3111 --strictPort",
-    url: "http://localhost:3111",
-    reuseExistingServer: true,
-    timeout: 120_000,
-    stdout: "ignore",
-  },
+  webServer: [
+    {
+      // The e2e dev server builds with the AI assistant included, so its
+      // panel is testable. The production artifact is still built without
+      // the flag (see docs/SECURITY_MODEL.md).
+      command: "VITE_ENABLE_AI=1 npm run dev -- --port 3111 --strictPort",
+      url: "http://localhost:3111",
+      reuseExistingServer: true,
+      timeout: 120_000,
+      stdout: "ignore",
+    },
+    {
+      // The optional companion service joins e2e for collaboration and
+      // search coverage; nothing else in the suite depends on it. Port
+      // 8899 avoids the podman VPN proxy bound to 8787 on dev machines.
+      command: "PORT=8899 node companion/src/server.mjs",
+      url: "http://localhost:8899/healthz",
+      reuseExistingServer: true,
+      timeout: 30_000,
+      stdout: "ignore",
+    },
+  ],
 });

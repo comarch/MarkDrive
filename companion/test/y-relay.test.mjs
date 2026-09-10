@@ -87,7 +87,16 @@ const makeClient = (port, room) => {
     ws.close();
   };
 
-  return { doc, awareness, ws, opened, publishUpdate, announce, sendSyncStep1, close };
+  return {
+    doc,
+    awareness,
+    ws,
+    opened,
+    publishUpdate,
+    announce,
+    sendSyncStep1,
+    close,
+  };
 };
 
 test("two clients converge on one document through the relay", async () => {
@@ -111,7 +120,10 @@ test("two clients converge on one document through the relay", async () => {
   bob.doc.getText("content").insert(0, "bob: ");
   bob.publishUpdate();
   await settle();
-  assert.equal(alice.doc.getText("content").toString(), "bob: hello from alice");
+  assert.equal(
+    alice.doc.getText("content").toString(),
+    "bob: hello from alice",
+  );
   assert.equal(bob.doc.getText("content").toString(), "bob: hello from alice");
 
   // Awareness: Alice announces presence, Bob sees it.

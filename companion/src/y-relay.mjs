@@ -26,7 +26,11 @@ export const createRelayState = () => {
       const awareness = new awarenessProtocol.Awareness(doc);
       // The server holds no presence of its own: drop the local state
       // the constructor seeds so joiners never see a ghost participant.
-      awarenessProtocol.removeAwarenessStates(awareness, [awareness.clientID], "server");
+      awarenessProtocol.removeAwarenessStates(
+        awareness,
+        [awareness.clientID],
+        "server",
+      );
       doc.awareness = awareness;
       docs.set(room, doc);
     }
@@ -40,7 +44,12 @@ export const createRelayState = () => {
  * Wires one socket into a room. `onJoin`/`onLeave` report room
  * membership so callers can audit relay traffic.
  */
-export const setupWSConnection = (ws, room, state = createRelayState(), hooks = {}) => {
+export const setupWSConnection = (
+  ws,
+  room,
+  state = createRelayState(),
+  hooks = {},
+) => {
   const doc = state.getDoc(room);
   const clients = state.connections.get(room) ?? new Set();
   clients.add(ws);
@@ -83,7 +92,10 @@ export const setupWSConnection = (ws, room, state = createRelayState(), hooks = 
     const awareness = doc.awareness;
     const clientsKnown = [...awareness.getStates().keys()];
     if (clientsKnown.length > 0) {
-      const update = awarenessProtocol.encodeAwarenessUpdate(awareness, clientsKnown);
+      const update = awarenessProtocol.encodeAwarenessUpdate(
+        awareness,
+        clientsKnown,
+      );
       const encoder = encoding.createEncoder();
       encoding.writeVarUint(encoder, MESSAGE_AWARENESS);
       encoding.writeVarUint8Array(encoder, update);

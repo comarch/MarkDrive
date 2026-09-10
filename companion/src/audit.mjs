@@ -67,7 +67,10 @@ export const createAuditLog = (logPath = "", retentionDays = 365) => {
       const rows = Number.isNaN(cutoff)
         ? entries
         : entries.filter((entry) => Date.parse(entry.timestamp) >= cutoff);
-      return rows.map((entry) => JSON.stringify(entry)).join("\n") + (rows.length ? "\n" : "");
+      return (
+        rows.map((entry) => JSON.stringify(entry)).join("\n") +
+        (rows.length ? "\n" : "")
+      );
     },
 
     stats() {
