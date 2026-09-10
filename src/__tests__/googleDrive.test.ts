@@ -83,4 +83,54 @@ describe("GoogleDriveService", () => {
     expect(body).toContain('"parents":["folder_123"]');
     expect(body).toContain("image bytes");
   });
+
+  it("requests head revision fields when updating a real file", async () => {
+    setRealToken();
+    const service = await createDriveService();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "file_123",
+          name: "notes.md",
+          mimeType: "text/markdown",
+          headRevisionId: "abc",
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await service.updateFile("file_123", "content", "notes.md");
+
+    const call = fetchMock.mock.calls[0];
+    if (!call) throw new Error("Expected update request");
+    const request = call[1] as RequestInit;
+    expect(String(call[0])).toContain("headRevisionId");
+    expect(request.method).toBe("PATCH");
+    expect(new Headers(request.headers).get("Authorization")).toBe(
+      "Bearer real_test_token",
+    );
+  });
+
+  it("fetches the real head revision ID", async () => {
+    setRealToken();
+    const service = await createDriveService();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ headRevisionId: "abc" }), {
+        status: 200,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(service.fetchHeadRevisionId("file_123")).resolves.toBe("abc");
+
+    const call = fetchMock.mock.calls[0];
+    if (!call) throw new Error("Expected head revision request");
+    expect(call[0]).toBe(
+      "https://www.googleapis.com/drive/v3/files/file_123?fields=headRevisionId",
+    );
+    expect(
+      new Headers((call[1] as RequestInit).headers).get("Authorization"),
+    ).toBe("Bearer real_test_token");
+  });
 });
