@@ -49,6 +49,11 @@ import { parseFrontmatter, updateFrontmatterField } from "./utils/frontmatter";
 import { REVIEW_STATUS_FIELD } from "./utils/reviewStatus";
 import { applyTableAction, type TableAction } from "./utils/tableUtils";
 import {
+  generateTableOfContents,
+  moveSectionBy,
+  numberHeadings,
+} from "./utils/structure";
+import {
   applySuggestionHunks,
   buildSuggestionHunks,
   parseSuggestions,
@@ -959,6 +964,32 @@ export const App: React.FC = () => {
     }
   };
 
+  // Structure tools: section moves, numbering, and generated TOC
+  const [headingNumbering, setHeadingNumbering] = useState(false);
+
+  const handleMoveSection = (headingLine: number, offset: -1 | 1) => {
+    const updated = moveSectionBy(content, headingLine, offset);
+    if (updated !== content) {
+      handleContentChange(updated);
+    }
+  };
+
+  const handleToggleNumbering = () => {
+    const next = !headingNumbering;
+    setHeadingNumbering(next);
+    const updated = numberHeadings(content, next);
+    if (updated !== content) {
+      handleContentChange(updated);
+    }
+  };
+
+  const handleInsertTableOfContents = () => {
+    const toc = generateTableOfContents(content);
+    if (toc) {
+      editorRef.current?.insertBlock(toc);
+    }
+  };
+
   // Synchronized Scrolling Handlers
   const handleEditorScroll = (pct: number) => {
     if (settings.syncScroll && viewMode === "split") {
@@ -1095,6 +1126,10 @@ export const App: React.FC = () => {
           onClose={() => setIsOutlineOpen(false)}
           outline={outline}
           onSelectHeading={handleSelectHeading}
+          onMoveSection={handleMoveSection}
+          numberingEnabled={headingNumbering}
+          onToggleNumbering={handleToggleNumbering}
+          onInsertTableOfContents={handleInsertTableOfContents}
         />
 
         {/* Code Editor Pane */}
