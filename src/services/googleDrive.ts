@@ -278,6 +278,73 @@ export class GoogleDriveService {
   }
 
   /**
+   * Creates a Google Docs file from Markdown. Drive performs the import
+   * conversion: the file resource requests the Docs target type while
+   * the media part stays Markdown, so the stored source of truth never
+   * leaves the browser.
+   */
+  public async createGoogleDocsFile(
+    name: string,
+    content: string,
+    folderId?: string,
+  ): Promise<DriveFileMetadata> {
+    const token = authService.getAccessToken();
+
+    if (!token || token.startsWith("mock_google_token_")) {
+      const id = "mock_docs_" + Math.random().toString(36).substring(2, 10);
+      const metadata: DriveFileMetadata = {
+        id,
+        name: name.replace(/\.(md|markdown|docx)$/i, ""),
+        mimeType: "application/vnd.google-apps.document",
+        modifiedTime: new Date().toISOString(),
+        parents: folderId ? [folderId] : undefined,
+        webViewLink: `https://docs.google.com/document/d/${id}/edit`,
+        capabilities: { canEdit: true, canComment: true },
+      };
+      return metadata;
+    }
+
+    const metadata: Record<string, unknown> = {
+      name: name.replace(/\.(md|markdown|docx)$/i, ""),
+      mimeType: "application/vnd.google-apps.document",
+    };
+    if (folderId) {
+      metadata.parents = [folderId];
+    }
+
+    const boundary = "-------314159265358979323846";
+    const delimiter = `\r\n--${boundary}\r\n`;
+    const closeDelimiter = `\r\n--${boundary}--`;
+
+    const multipartRequestBody =
+      delimiter +
+      "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
+      JSON.stringify(metadata) +
+      delimiter +
+      "Content-Type: text/markdown; charset=UTF-8\r\n\r\n" +
+      content +
+      closeDelimiter;
+
+    const res = await fetch(
+      `${UPLOAD_API_BASE}/files?uploadType=multipart&fields=id,name,mimeType,modifiedTime,webViewLink,capabilities,parents`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": `multipart/related; boundary=${boundary}`,
+        },
+        body: multipartRequestBody,
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(`Failed to create Google Docs file: ${res.statusText}`);
+    }
+
+    return await res.json();
+  }
+
+  /**
    * Lists Markdown files the app may open, most recently viewed first.
    *
    * With the drive.file scope this returns files the app created or opened

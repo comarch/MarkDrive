@@ -1,5 +1,6 @@
 import { parseMarkdown } from "../components/Preview/markdownParser";
 import type { ExportStyles } from "./exportAssets";
+import { buildDocx } from "./docx";
 
 /**
  * Downloads a file to user's computer
@@ -21,6 +22,19 @@ function downloadBlob(blob: Blob, filename: string) {
 export function exportAsMarkdown(filename: string, content: string) {
   const finalName = filename.endsWith(".md") ? filename : `${filename}.md`;
   const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+  downloadBlob(blob, finalName);
+}
+
+/**
+ * Exports the document as a Word file, generated in the browser from the
+ * Markdown token stream.
+ */
+export function exportAsDocx(filename: string, markdownContent: string) {
+  const finalName = filename.endsWith(".docx") ? filename : `${filename}.docx`;
+  const bytes = buildDocx(markdownContent);
+  const blob = new Blob([bytes as BlobPart], {
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
   downloadBlob(blob, finalName);
 }
 
