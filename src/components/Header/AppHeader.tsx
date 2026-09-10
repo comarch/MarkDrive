@@ -21,6 +21,7 @@ import {
   FilePen,
   ListChecks,
   LayoutTemplate,
+  Network,
 } from "lucide-react";
 import { DriveUser, SaveStatus, DriveFileMetadata } from "../../types/drive";
 import {
@@ -44,6 +45,7 @@ interface AppHeaderProps {
   reviewStatus: string | null;
   onOpenReviewQueue?: () => void;
   onOpenTemplates?: () => void;
+  onOpenGraph?: () => void;
   user: DriveUser | null;
   fileMetadata: DriveFileMetadata | null;
   isDark: boolean;
@@ -74,6 +76,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   reviewStatus,
   onOpenReviewQueue,
   onOpenTemplates,
+  onOpenGraph,
   user,
   fileMetadata,
   isDark,
@@ -330,6 +333,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
           >
             <LayoutTemplate className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Folder link graph button */}
+        {onOpenGraph && (
+          <button
+            onClick={onOpenGraph}
+            title="Folder link graph"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+          >
+            <Network className="w-4 h-4" />
           </button>
         )}
 

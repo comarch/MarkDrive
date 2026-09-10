@@ -26,6 +26,22 @@ interface MarkdownPreviewProps {
   onOpenDocLink?: (target: string) => void;
 }
 
+// Task checkbox clicks toggle the matching source line; returns true when
+// the click was on a checkbox (handled, with or without a callback).
+const handleTaskToggle = (
+  target: HTMLElement,
+  onToggleTask?: (lineNumber: number, checked: boolean) => void,
+): boolean => {
+  const checkbox = target.closest("input.task-list-item-checkbox");
+  if (!checkbox) return false;
+  const lineAttr = checkbox.getAttribute("data-task-line");
+  if (!lineAttr || !onToggleTask) return true;
+  const lineNumber = Number.parseInt(lineAttr, 10);
+  if (!Number.isFinite(lineNumber)) return true;
+  onToggleTask(lineNumber, !checkbox.hasAttribute("checked"));
+  return true;
+};
+
 // Mermaid configuration
 mermaid.initialize({
   startOnLoad: false,
@@ -124,15 +140,8 @@ export const MarkdownPreview = forwardRef<
     const handleClick = (e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
 
-      const checkbox = target.closest("input.task-list-item-checkbox");
-      if (checkbox) {
+      if (handleTaskToggle(target, onToggleTask)) {
         e.preventDefault();
-        const lineAttr = checkbox.getAttribute("data-task-line");
-        if (!lineAttr || !onToggleTask) return;
-        const lineNumber = Number.parseInt(lineAttr, 10);
-        if (!Number.isFinite(lineNumber)) return;
-        const currentChecked = checkbox.hasAttribute("checked");
-        onToggleTask(lineNumber, !currentChecked);
         return;
       }
 
@@ -152,6 +161,15 @@ export const MarkdownPreview = forwardRef<
         e.preventDefault();
         const docTarget = (docLink as HTMLElement).dataset.docLink;
         if (docTarget && onOpenDocLink) onOpenDocLink(docTarget);
+        return;
+      }
+
+      // Wikilinks resolve against the folder like relative links
+      const wikilink = target.closest("a.wikilink");
+      if (wikilink) {
+        e.preventDefault();
+        const wikiTarget = (wikilink as HTMLElement).dataset.wikilink;
+        if (wikiTarget && onOpenDocLink) onOpenDocLink(wikiTarget);
         return;
       }
 
