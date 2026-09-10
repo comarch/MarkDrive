@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Save,
   FilePlus,
+  FolderOpen,
   Download,
   ListTree,
   History,
@@ -33,6 +34,7 @@ interface AppHeaderProps {
   onToggleTheme: () => void;
   onSave: () => void;
   onNewDocument: () => void;
+  onOpenFileBrowser?: () => void;
   onOpenExportModal: () => void;
   onToggleOutline: () => void;
   isOutlineOpen: boolean;
@@ -56,6 +58,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onToggleTheme,
   onSave,
   onNewDocument,
+  onOpenFileBrowser,
   onOpenExportModal,
   onToggleOutline,
   isOutlineOpen,
@@ -206,6 +209,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         >
           <FilePlus className="w-4 h-4" />
         </button>
+
+        {/* Open recent Markdown files button */}
+        {onOpenFileBrowser && (
+          <button
+            onClick={onOpenFileBrowser}
+            title="Open Markdown files"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+          >
+            <FolderOpen className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Save button */}
         <button

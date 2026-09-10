@@ -19,6 +19,7 @@ import { InsertTableModal } from "./components/Modals/InsertTableModal";
 import { OutlineSidebar } from "./components/Modals/OutlineSidebar";
 import { ConflictModal } from "./components/Modals/ConflictModal";
 import { HistorySidebar } from "./components/Modals/HistorySidebar";
+import { FileBrowserModal } from "./components/Modals/FileBrowserModal";
 
 import { authService } from "./services/googleAuth";
 import { driveService } from "./services/googleDrive";
@@ -125,6 +126,14 @@ export const App: React.FC = () => {
   const [historySelectedContent, setHistorySelectedContent] = useState<
     string | null
   >(null);
+
+  // Recent Markdown files browser
+  const [isFileBrowserOpen, setIsFileBrowserOpen] = useState(false);
+  const [fileBrowserFiles, setFileBrowserFiles] = useState<DriveFileMetadata[]>(
+    [],
+  );
+  const [fileBrowserLoading, setFileBrowserLoading] = useState(false);
+  const [fileBrowserError, setFileBrowserError] = useState<string | null>(null);
 
   // Editor Selection & View Mode
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
@@ -385,6 +394,58 @@ export const App: React.FC = () => {
     [fileMetadata, loadHistory, saveStatus],
   );
 
+  // Load the recent Markdown file list
+  const loadFileList = useCallback(async () => {
+    setFileBrowserLoading(true);
+    setFileBrowserError(null);
+    try {
+      const files = await driveService.listMarkdownFiles();
+      setFileBrowserFiles(files);
+    } catch (err) {
+      setFileBrowserError(err instanceof Error ? err.message : "Unknown error");
+      setFileBrowserFiles([]);
+    } finally {
+      setFileBrowserLoading(false);
+    }
+  }, []);
+
+  const handleOpenFileBrowser = useCallback(async () => {
+    setIsFileBrowserOpen(true);
+    await loadFileList();
+  }, [loadFileList]);
+
+  // Switch to another Drive document without leaving the app
+  const handleOpenFile = useCallback(
+    async (fileId: string) => {
+      if (saveStatus === "unsaved") {
+        const confirmSwitch = window.confirm(
+          "You have unsaved changes. Open another file anyway?",
+        );
+        if (!confirmSwitch) return;
+      }
+      setSaveStatus("saving");
+      try {
+        const result = await driveService.getFile(fileId);
+        setFileMetadata(result.metadata);
+        setDocumentTitle(result.metadata.name);
+        setContent(result.content);
+        lastSyncedContentRef.current = result.content;
+        // The draft cache is not written here: opened Drive content stays out
+        // of local storage until the user edits, which refreshes the cache.
+        setSaveStatus("saved");
+        setIsFileBrowserOpen(false);
+        updateUrlFileId(fileId);
+        setSelectedCommentId(null);
+        setComments([]);
+        await loadComments(fileId);
+      } catch (err) {
+        console.error("Failed to open file:", err);
+        setSaveStatus("error");
+      }
+    },
+    [loadComments, saveStatus],
+  );
+
   // Handle document content change & auto-save
   const handleContentChange = (newContent: string) => {
     setContent(newContent);
@@ -613,6 +674,7 @@ export const App: React.FC = () => {
         onToggleTheme={() => setIsDark(!isDark)}
         onSave={handleSaveDocument}
         onNewDocument={handleNewDocument}
+        onOpenFileBrowser={handleOpenFileBrowser}
         onOpenExportModal={() => setIsExportOpen(true)}
         onToggleOutline={() => setIsOutlineOpen(!isOutlineOpen)}
         isOutlineOpen={isOutlineOpen}
@@ -741,6 +803,17 @@ export const App: React.FC = () => {
         isOpen={isTableModalOpen}
         onClose={() => setIsTableModalOpen(false)}
         onInsertTable={(table) => editorRef.current?.insertBlock(table)}
+      />
+
+      {/* Recent Markdown Files Modal */}
+      <FileBrowserModal
+        isOpen={isFileBrowserOpen}
+        onClose={() => setIsFileBrowserOpen(false)}
+        files={fileBrowserFiles}
+        loading={fileBrowserLoading}
+        error={fileBrowserError}
+        onSelect={handleOpenFile}
+        onRefresh={loadFileList}
       />
 
       {/* Save Conflict Resolution Modal */}
