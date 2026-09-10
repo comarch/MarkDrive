@@ -120,6 +120,21 @@ MarkQuire auto-saves after the configured delay.
 
 When the document comes from Drive, content and title changes are written to the same Drive file. In demo mode they remain in local browser storage.
 
+## Resolve save conflicts
+
+Before every save, MarkQuire checks the current Drive revision of the open
+file. When another session saved a new version in the meantime, the save stops
+and a merge dialog opens:
+
+- the dialog shows a three-way merge of your changes, the Drive version, and
+  the version both sessions started from;
+- conflicting passages are marked with LOCAL, BASE, and REMOTE blocks;
+- edit the merged text, remove the markers, and save; or keep your version or
+  the Drive version with one click.
+
+The saved result becomes the newest Drive revision, so nothing is lost
+silently.
+
 ## Export
 
 Select the export button in the header.

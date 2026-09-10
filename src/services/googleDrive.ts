@@ -55,7 +55,7 @@ export class GoogleDriveService {
 
     // 1. Fetch metadata
     const metaRes = await fetch(
-      `${DRIVE_API_BASE}/files/${fileId}?fields=id,name,mimeType,modifiedTime,webViewLink,parents,capabilities`,
+      `${DRIVE_API_BASE}/files/${fileId}?fields=id,name,mimeType,modifiedTime,webViewLink,parents,capabilities,headRevisionId`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -136,7 +136,7 @@ export class GoogleDriveService {
       closeDelimiter;
 
     const res = await fetch(
-      `${UPLOAD_API_BASE}/files/${fileId}?uploadType=multipart&fields=id,name,mimeType,modifiedTime,capabilities`,
+      `${UPLOAD_API_BASE}/files/${fileId}?uploadType=multipart&fields=id,name,mimeType,modifiedTime,parents,capabilities,headRevisionId`,
       {
         method: "PATCH",
         headers: {
@@ -205,7 +205,7 @@ export class GoogleDriveService {
       closeDelimiter;
 
     const res = await fetch(
-      `${UPLOAD_API_BASE}/files?uploadType=multipart&fields=id,name,mimeType,modifiedTime,webViewLink,capabilities`,
+      `${UPLOAD_API_BASE}/files?uploadType=multipart&fields=id,name,mimeType,modifiedTime,webViewLink,capabilities,parents,headRevisionId`,
       {
         method: "POST",
         headers: {
@@ -223,6 +223,33 @@ export class GoogleDriveService {
     }
 
     return await res.json();
+  }
+
+  /**
+   * Fetches the current head revision ID for a file.
+   */
+  public async fetchHeadRevisionId(fileId: string): Promise<string | null> {
+    const token = authService.getAccessToken();
+
+    if (!token || token.startsWith("mock_google_token_")) {
+      return getMockStorage()[fileId]?.metadata.headRevisionId ?? null;
+    }
+
+    const res = await fetch(
+      `${DRIVE_API_BASE}/files/${fileId}?fields=headRevisionId`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `Failed to load file revision metadata: ${res.statusText}`,
+      );
+    }
+
+    const data = (await res.json()) as { headRevisionId?: string };
+    return data.headRevisionId ?? null;
   }
 
   /**
@@ -304,7 +331,7 @@ export class GoogleDriveService {
     }
 
     const res = await fetch(
-      `${DRIVE_API_BASE}/files/${fileId}?fields=id,name,mimeType,modifiedTime`,
+      `${DRIVE_API_BASE}/files/${fileId}?fields=id,name,mimeType,modifiedTime,headRevisionId`,
       {
         method: "PATCH",
         headers: {

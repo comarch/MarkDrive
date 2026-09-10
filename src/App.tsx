@@ -17,6 +17,7 @@ import { SettingsModal } from "./components/Modals/SettingsModal";
 import { ExportModal } from "./components/Modals/ExportModal";
 import { InsertTableModal } from "./components/Modals/InsertTableModal";
 import { OutlineSidebar } from "./components/Modals/OutlineSidebar";
+import { ConflictModal } from "./components/Modals/ConflictModal";
 
 import { authService } from "./services/googleAuth";
 import { driveService } from "./services/googleDrive";
@@ -105,6 +106,12 @@ export const App: React.FC = () => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
 
+  // Save conflict detected when Drive moved ahead of this session
+  const [conflict, setConflict] = useState<{
+    baseContent: string;
+    remoteContent: string;
+  } | null>(null);
+
   // Editor Selection & View Mode
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("split");
@@ -113,6 +120,10 @@ export const App: React.FC = () => {
   const editorRef = useRef<CodeMirrorEditorHandle>(null);
   const previewRef = useRef<MarkdownPreviewHandle>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Content last synced with Drive; acts as the base for conflict merges.
+  const lastSyncedContentRef = useRef<string>(content);
+  // Suppresses auto-save while the conflict dialog is open.
+  const isConflictOpenRef = useRef(false);
 
   // Sync theme with DOM
   useEffect(() => {
@@ -169,6 +180,7 @@ export const App: React.FC = () => {
           setFileMetadata(result.metadata);
           setDocumentTitle(result.metadata.name);
           setContent(result.content);
+          lastSyncedContentRef.current = result.content;
           setSaveStatus("saved");
           updateUrlFileId(fileId);
           await loadComments(fileId);
@@ -182,6 +194,7 @@ export const App: React.FC = () => {
           setFileMetadata(created);
           setDocumentTitle(created.name);
           setContent(SAMPLE_MARKDOWN);
+          lastSyncedContentRef.current = SAMPLE_MARKDOWN;
           setSaveStatus("saved");
           updateUrlFileId(created.id);
           await loadComments(created.id);
@@ -197,16 +210,39 @@ export const App: React.FC = () => {
 
   // Save document to Google Drive / LocalStorage
   const handleSaveDocument = useCallback(async () => {
+    if (isConflictOpenRef.current) return; // resolve the open conflict first
     setSaveStatus("saving");
     try {
       if (fileMetadata) {
-        // Save to Google Drive
+        // Detect concurrent edits: compare the Drive head revision with the
+        // revision this session last synced from.
+        const knownHead = fileMetadata.headRevisionId;
+        let remoteHead: string | null = null;
+        try {
+          remoteHead = await driveService.fetchHeadRevisionId(fileMetadata.id);
+        } catch {
+          // The revision check is best effort; the update call still reports
+          // hard failures.
+        }
+        if (knownHead && remoteHead && knownHead !== remoteHead) {
+          const remote = await driveService.getFile(fileMetadata.id);
+          setConflict({
+            baseContent: lastSyncedContentRef.current,
+            remoteContent: remote.content,
+          });
+          isConflictOpenRef.current = true;
+          setSaveStatus("unsaved");
+          return;
+        }
         const updated = await driveService.updateFile(
           fileMetadata.id,
           content,
           documentTitle,
         );
-        setFileMetadata(updated);
+        // Merge instead of replace: update responses omit fields like
+        // parents, and losing them would misplace later image uploads.
+        setFileMetadata((prev) => (prev ? { ...prev, ...updated } : updated));
+        lastSyncedContentRef.current = content;
       } else {
         // Save draft locally
         localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, content);
@@ -219,18 +255,62 @@ export const App: React.FC = () => {
     }
   }, [content, documentTitle, fileMetadata]);
 
+  // Auto-save timers must call the latest save handler; a plain closure
+  // would capture stale content from the render that scheduled the timer.
+  const saveDocumentRef = useRef(handleSaveDocument);
+  useEffect(() => {
+    saveDocumentRef.current = handleSaveDocument;
+  }, [handleSaveDocument]);
+
+  // Write the resolved content from the conflict dialog to Drive
+  const handleResolveConflict = useCallback(
+    async (resolvedContent: string) => {
+      if (!fileMetadata) return;
+      setConflict(null);
+      isConflictOpenRef.current = false;
+      setSaveStatus("saving");
+      try {
+        const updated = await driveService.updateFile(
+          fileMetadata.id,
+          resolvedContent,
+          documentTitle,
+        );
+        setFileMetadata((prev) => (prev ? { ...prev, ...updated } : updated));
+        setContent(resolvedContent);
+        localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, resolvedContent);
+        lastSyncedContentRef.current = resolvedContent;
+        setSaveStatus("saved");
+      } catch (err) {
+        console.error("Failed to save merged content:", err);
+        setSaveStatus("error");
+      }
+    },
+    [documentTitle, fileMetadata],
+  );
+
+  // Dismiss the conflict dialog without saving
+  const handleDismissConflict = useCallback(() => {
+    setConflict(null);
+    isConflictOpenRef.current = false;
+    setSaveStatus("unsaved");
+  }, []);
+
   // Handle document content change & auto-save
   const handleContentChange = (newContent: string) => {
     setContent(newContent);
     setSaveStatus("unsaved");
-    localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, newContent);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, newContent);
+    } catch {
+      // Draft persistence is best effort; keep editing when the quota is full.
+    }
 
     if (settings.autoSaveIntervalMs > 0) {
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
       }
       autoSaveTimerRef.current = setTimeout(() => {
-        handleSaveDocument();
+        saveDocumentRef.current();
       }, settings.autoSaveIntervalMs);
     }
   };
@@ -247,7 +327,9 @@ export const App: React.FC = () => {
           fileMetadata.id,
           formatted,
         );
-        setFileMetadata(updated);
+        // Merge instead of replace: rename responses omit fields like
+        // parents, and losing them would misplace later image uploads.
+        setFileMetadata((prev) => (prev ? { ...prev, ...updated } : updated));
       } catch (err) {
         console.error("Failed to rename Drive file:", err);
       }
@@ -272,6 +354,7 @@ export const App: React.FC = () => {
       setFileMetadata(newFile);
       setDocumentTitle(newFile.name);
       setContent("# Untitled Document\n\n");
+      lastSyncedContentRef.current = "# Untitled Document\n\n";
       setSaveStatus("saved");
       updateUrlFileId(newFile.id);
       await loadComments(newFile.id);
@@ -552,6 +635,18 @@ export const App: React.FC = () => {
         onClose={() => setIsTableModalOpen(false)}
         onInsertTable={(table) => editorRef.current?.insertBlock(table)}
       />
+
+      {/* Save Conflict Resolution Modal */}
+      {conflict !== null && (
+        <ConflictModal
+          isOpen
+          onClose={handleDismissConflict}
+          localContent={content}
+          remoteContent={conflict.remoteContent}
+          baseContent={conflict.baseContent}
+          onResolve={handleResolveConflict}
+        />
+      )}
 
       {/* Settings Modal */}
       <SettingsModal
