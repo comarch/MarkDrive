@@ -48,6 +48,7 @@ export class GoogleDriveService {
   public async getFile(
     fileId: string,
   ): Promise<{ content: string; metadata: DriveFileMetadata }> {
+    assertValidDriveId(fileId, "file id");
     const token = authService.getAccessToken();
 
     // Check mock storage if token is mock or no real token
@@ -71,7 +72,7 @@ export class GoogleDriveService {
 
     // 1. Fetch metadata
     const metaRes = await fetch(
-      `${DRIVE_API_BASE}/files/${fileId}?fields=id,name,mimeType,modifiedTime,webViewLink,parents,capabilities,headRevisionId`,
+      `${DRIVE_API_BASE}/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,modifiedTime,webViewLink,parents,capabilities,headRevisionId`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -85,7 +86,7 @@ export class GoogleDriveService {
 
     // 2. Fetch file content
     const contentRes = await fetch(
-      `${DRIVE_API_BASE}/files/${fileId}?alt=media`,
+      `${DRIVE_API_BASE}/files/${encodeURIComponent(fileId)}?alt=media`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -109,6 +110,7 @@ export class GoogleDriveService {
     content: string,
     name?: string,
   ): Promise<DriveFileMetadata> {
+    assertValidDriveId(fileId, "file id");
     const token = authService.getAccessToken();
 
     if (!token || token.startsWith("mock_google_token_")) {
@@ -169,7 +171,7 @@ export class GoogleDriveService {
       closeDelimiter;
 
     const res = await fetch(
-      `${UPLOAD_API_BASE}/files/${fileId}?uploadType=multipart&fields=id,name,mimeType,modifiedTime,parents,capabilities,headRevisionId`,
+      `${UPLOAD_API_BASE}/files/${encodeURIComponent(fileId)}?uploadType=multipart&fields=id,name,mimeType,modifiedTime,parents,capabilities,headRevisionId`,
       {
         method: "PATCH",
         headers: {
@@ -197,6 +199,9 @@ export class GoogleDriveService {
     content: string,
     folderId?: string,
   ): Promise<DriveFileMetadata> {
+    if (folderId !== undefined) {
+      assertValidDriveId(folderId, "folder id");
+    }
     const token = authService.getAccessToken();
 
     if (!token || token.startsWith("mock_google_token_")) {
@@ -273,9 +278,53 @@ export class GoogleDriveService {
   }
 
   /**
+   * Lists Markdown files the app may open, most recently viewed first.
+   *
+   * With the drive.file scope this returns files the app created or opened
+   * before; files it never touched need the Drive UI or Picker.
+   */
+  public async listMarkdownFiles(): Promise<DriveFileMetadata[]> {
+    const token = authService.getAccessToken();
+
+    if (!token || token.startsWith("mock_google_token_")) {
+      const store = getMockStorage();
+      return Object.values(store)
+        .filter(
+          (entry) =>
+            entry.metadata.mimeType === "text/markdown" ||
+            /\.(md|markdown)$/i.test(entry.metadata.name),
+        )
+        .sort((a, b) =>
+          (b.metadata.modifiedTime ?? "").localeCompare(
+            a.metadata.modifiedTime ?? "",
+          ),
+        )
+        .map((entry) => entry.metadata);
+    }
+
+    const query = encodeURIComponent(
+      "mimeType = 'text/markdown' or name contains '.md' or name contains '.markdown'",
+    );
+    const res = await fetch(
+      `${DRIVE_API_BASE}/files?q=${query}&orderBy=viewedByMeTime desc&pageSize=50&fields=nextPageToken,files(id,name,mimeType,modifiedTime,webViewLink,parents,capabilities,headRevisionId)`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(`Failed to list Markdown files: ${res.statusText}`);
+    }
+
+    const data = (await res.json()) as { files?: DriveFileMetadata[] };
+    return data.files ?? [];
+  }
+
+  /**
    * Fetches the current head revision ID for a file.
    */
   public async fetchHeadRevisionId(fileId: string): Promise<string | null> {
+    assertValidDriveId(fileId, "file id");
     const token = authService.getAccessToken();
 
     if (!token || token.startsWith("mock_google_token_")) {
@@ -283,7 +332,7 @@ export class GoogleDriveService {
     }
 
     const res = await fetch(
-      `${DRIVE_API_BASE}/files/${fileId}?fields=headRevisionId`,
+      `${DRIVE_API_BASE}/files/${encodeURIComponent(fileId)}?fields=headRevisionId`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -324,7 +373,7 @@ export class GoogleDriveService {
         "fields=nextPageToken,revisions(id,modifiedTime,lastModifyingUser(displayName,emailAddress))&pageSize=100" +
         (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : "");
       const res = await fetch(
-        `${DRIVE_API_BASE}/files/${fileId}/revisions?${query}`,
+        `${DRIVE_API_BASE}/files/${encodeURIComponent(fileId)}/revisions?${query}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -368,7 +417,7 @@ export class GoogleDriveService {
     }
 
     const res = await fetch(
-      `${DRIVE_API_BASE}/files/${fileId}/revisions/${revisionId}?alt=media`,
+      `${DRIVE_API_BASE}/files/${encodeURIComponent(fileId)}/revisions/${encodeURIComponent(revisionId)}?alt=media`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -399,6 +448,9 @@ export class GoogleDriveService {
     file: File,
     folderId?: string,
   ): Promise<DriveFileMetadata> {
+    if (folderId !== undefined) {
+      assertValidDriveId(folderId, "folder id");
+    }
     const token = authService.getAccessToken();
 
     if (!token || token.startsWith("mock_google_token_")) {
@@ -458,6 +510,7 @@ export class GoogleDriveService {
     fileId: string,
     newName: string,
   ): Promise<DriveFileMetadata> {
+    assertValidDriveId(fileId, "file id");
     const token = authService.getAccessToken();
 
     if (!token || token.startsWith("mock_google_token_")) {
@@ -471,7 +524,7 @@ export class GoogleDriveService {
     }
 
     const res = await fetch(
-      `${DRIVE_API_BASE}/files/${fileId}?fields=id,name,mimeType,modifiedTime,headRevisionId`,
+      `${DRIVE_API_BASE}/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,modifiedTime,headRevisionId`,
       {
         method: "PATCH",
         headers: {

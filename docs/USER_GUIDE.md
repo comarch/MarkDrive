@@ -23,6 +23,14 @@ After an administrator completes the [Google Workspace setup](../GOOGLE_WORKSPAC
 
 Google Drive passes file context to MarkQuire in the URL. The app then loads or creates the requested file.
 
+## Switch between Markdown files
+
+Select the open button in the header to browse Markdown files MarkQuire has
+created or opened, sorted by the time you last viewed them. Selecting a file
+opens it in place, and unsaved changes ask for confirmation first. The app's
+Drive scope does not see files it never touched, so open those from Google
+Drive once and they join the list.
+
 ## Connect your account
 
 1. Select **Sign In** in the top-right corner.

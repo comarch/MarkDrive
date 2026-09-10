@@ -179,6 +179,20 @@ describe("GoogleDriveService", () => {
     ).rejects.toThrow("Invalid revision id");
   });
 
+  it("rejects malformed ids at every service entry point", async () => {
+    const service = await createDriveService();
+    await expect(service.getFile("bad/id")).rejects.toThrow("Invalid file id");
+    await expect(service.updateFile("bad id", "x")).rejects.toThrow(
+      "Invalid file id",
+    );
+    await expect(
+      service.createFile("name", "content", "folder?"),
+    ).rejects.toThrow("Invalid folder id");
+    await expect(service.fetchHeadRevisionId("..")).rejects.toThrow(
+      "Invalid file id",
+    );
+  });
+
   it("lists real revisions newest first across pages", async () => {
     setRealToken();
     const service = await createDriveService();
@@ -245,6 +259,44 @@ describe("GoogleDriveService", () => {
     expect(call[0]).toBe(
       "https://www.googleapis.com/drive/v3/files/file_123/revisions/rev_1?alt=media",
     );
+    expect(
+      new Headers((call[1] as RequestInit).headers).get("Authorization"),
+    ).toBe("Bearer real_test_token");
+  });
+
+  it("lists mock markdown files from the mock store", async () => {
+    const service = await createDriveService();
+    await service.createFile("notes", "a");
+    await service.createFile("report", "b");
+
+    const files = await service.listMarkdownFiles();
+    expect(files.map((file) => file.name)).toEqual(
+      expect.arrayContaining(["notes.md", "report.md"]),
+    );
+    expect(files.every((file) => /(?:\.md|\.markdown)$/.test(file.name))).toBe(
+      true,
+    );
+  });
+
+  it("lists real markdown files most recently viewed first", async () => {
+    setRealToken();
+    const service = await createDriveService();
+    const files = [{ id: "file_1", name: "notes.md" }];
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ files }), {
+        status: 200,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(service.listMarkdownFiles()).resolves.toEqual(files);
+
+    const call = fetchMock.mock.calls[0];
+    if (!call) throw new Error("Expected file list request");
+    const requestUrl = String(call[0]);
+    expect(requestUrl).toContain("https://www.googleapis.com/drive/v3/files?");
+    expect(requestUrl).toContain("orderBy=viewedByMeTime desc");
+    expect(requestUrl).toContain("text%2Fmarkdown");
     expect(
       new Headers((call[1] as RequestInit).headers).get("Authorization"),
     ).toBe("Bearer real_test_token");
