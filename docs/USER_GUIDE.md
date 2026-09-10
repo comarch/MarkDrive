@@ -57,6 +57,12 @@ panel supports regular expressions, case sensitivity, single replace, and
 replace all. Replace all applies as one edit, so a single `Ctrl+Z` undoes the
 whole replacement.
 
+### Interactive task lists
+
+Task list checkboxes in the preview are clickable. Ticking a box rewrites the
+Markdown source line, so the change is part of the portable file and survives
+export.
+
 ### View modes
 
 | Mode         | Use it for                            |

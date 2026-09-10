@@ -23,6 +23,7 @@ import { driveService } from "./services/googleDrive";
 import { commentsService } from "./services/googleComments";
 import { parseDriveStateFromUrl, updateUrlFileId } from "./services/driveState";
 import { SAMPLE_MARKDOWN } from "./utils/sampleDocument";
+import { toggleTaskLine } from "./utils/tasks";
 
 import {
   DriveUser,
@@ -349,6 +350,14 @@ export const App: React.FC = () => {
     }
   };
 
+  // Interactive task checkbox in the preview writes back to the source
+  const handleToggleTask = (lineNumber: number, checked: boolean) => {
+    const updated = toggleTaskLine(content, lineNumber, checked);
+    if (updated !== content) {
+      handleContentChange(updated);
+    }
+  };
+
   // Synchronized Scrolling Handlers
   const handleEditorScroll = (pct: number) => {
     if (settings.syncScroll && viewMode === "split") {
@@ -481,6 +490,7 @@ export const App: React.FC = () => {
                 setIsCommentsOpen(true);
                 setSelectedCommentId(id);
               }}
+              onToggleTask={handleToggleTask}
             />
           </div>
         )}
