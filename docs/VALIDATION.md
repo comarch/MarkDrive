@@ -30,6 +30,7 @@ npm run lint
 npm run typecheck
 npm test
 npm run test:coverage
+npm run test:e2e
 npm run build
 npm run verify:artifact
 npm run verify:repository
@@ -40,9 +41,22 @@ npm run promptscript:compile
 Use focused commands during development. Run the complete contract before every
 commit and release.
 
+## End-to-end tests
+
+```bash
+npm run test:e2e
+```
+
+Playwright drives a real Chromium browser against the Vite dev server in demo
+mode on port 3111, so no Google credentials are required. Coverage includes
+the editor and preview shell, view modes, the comments workflow, export, search
+and replace, interactive task checkboxes, and Drive version history. CI runs
+the same suite in the End-to-end tests job.
+
 ## CI checks
 
 - **Quality and build** runs the complete npm contract.
+- **End-to-end tests** runs the Playwright suite against the dev server in demo mode.
 - **Validate PromptScript** checks source and generated outputs independently.
 - **Production dependency audit** checks npm advisories.
 - **Dependency review** evaluates pull request dependency changes.
@@ -73,6 +87,6 @@ Before a user-facing release:
 6. check light and dark themes;
 7. inspect the browser console for errors.
 
-Cross-browser end-to-end automation and a hard bundle-size budget are not yet
-part of the validation contract. Vite may warn about chunks above its default
-size threshold while the build still passes.
+Cross-browser coverage beyond Chromium and a hard bundle-size budget are not
+yet part of the validation contract. Vite may warn about chunks above its
+default size threshold while the build still passes.

@@ -31,3 +31,7 @@ coverage
 
 # Git Worktrees
 .worktrees/
+
+# Playwright
+test-results/
+playwright-report/

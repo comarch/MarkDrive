@@ -168,19 +168,21 @@ podman run -d -p 3000:80 --name markquire markquire
 
 ## Documentation
 
-| Guide                                                 | Purpose                                                          |
-| ----------------------------------------------------- | ---------------------------------------------------------------- |
-| [Product overview](./docs/PRODUCT_OVERVIEW.md)        | Audience, value proposition, use cases, and market position      |
-| [User guide](./docs/USER_GUIDE.md)                    | Daily writing, review, export, settings, and troubleshooting     |
-| [Brand and listing kit](./docs/BRAND.md)              | Logo assets, colors, repository copy, and Marketplace copy       |
-| [Google Workspace setup](./GOOGLE_WORKSPACE_SETUP.md) | OAuth, Drive UI integration, deployment, and private publication |
-| [Compatibility](./docs/COMPATIBILITY.md)              | Runtime, browser, Google API, and unsupported combinations       |
-| [Release and rollback](./docs/RELEASE.md)             | Versioning, artifacts, publishing, and recovery                  |
-| [Validation](./docs/VALIDATION.md)                    | Local quality contract, CI checks, and manual release checks     |
-| [Security model](./docs/SECURITY_MODEL.md)            | Data flow, trust boundaries, threats, and incident response      |
-| [Repository settings](./docs/REPOSITORY_SETTINGS.md)  | Branch rules, checks, labels, secrets, and bootstrap audit       |
-| [Contributing](./CONTRIBUTING.md)                     | Development workflow and validation                              |
-| [Security](./SECURITY.md)                             | Supported versions and private vulnerability reporting           |
+| Guide                                                  | Purpose                                                          |
+| ------------------------------------------------------ | ---------------------------------------------------------------- |
+| [Product overview](./docs/PRODUCT_OVERVIEW.md)         | Audience, value proposition, use cases, and market position      |
+| [Competitive analysis](./docs/COMPETITIVE_ANALYSIS.md) | Competitor rings, gap analysis, and market constraints           |
+| [Roadmap](./docs/ROADMAP.md)                           | Prioritized features with per-item implementation plans          |
+| [User guide](./docs/USER_GUIDE.md)                     | Daily writing, review, export, settings, and troubleshooting     |
+| [Brand and listing kit](./docs/BRAND.md)               | Logo assets, colors, repository copy, and Marketplace copy       |
+| [Google Workspace setup](./GOOGLE_WORKSPACE_SETUP.md)  | OAuth, Drive UI integration, deployment, and private publication |
+| [Compatibility](./docs/COMPATIBILITY.md)               | Runtime, browser, Google API, and unsupported combinations       |
+| [Release and rollback](./docs/RELEASE.md)              | Versioning, artifacts, publishing, and recovery                  |
+| [Validation](./docs/VALIDATION.md)                     | Local quality contract, CI checks, and manual release checks     |
+| [Security model](./docs/SECURITY_MODEL.md)             | Data flow, trust boundaries, threats, and incident response      |
+| [Repository settings](./docs/REPOSITORY_SETTINGS.md)   | Branch rules, checks, labels, secrets, and bootstrap audit       |
+| [Contributing](./CONTRIBUTING.md)                      | Development workflow and validation                              |
+| [Security](./SECURITY.md)                              | Supported versions and private vulnerability reporting           |
 
 ## Development
 
@@ -191,12 +193,14 @@ npm run format:check
 npm run lint
 npm run typecheck
 npm run test:coverage
+npm run test:e2e
 npm run build
 npm run verify:artifact
 npm run validate
 ```
 
-`npm run validate` executes the complete project quality contract.
+`npm run validate` executes the complete project quality contract. Playwright
+end-to-end tests run separately through `npm run test:e2e`.
 
 ## Project status
 

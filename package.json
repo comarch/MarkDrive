@@ -27,6 +27,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "promptscript:validate": "prs validate --strict",
     "promptscript:compile": "prs compile",
     "promptscript:check": "node scripts/check-promptscript.mjs",
@@ -60,6 +61,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@promptscript/cli": "^1.18.1",
     "@types/katex": "^0.16.7",
     "@types/markdown-it": "^14.1.2",
