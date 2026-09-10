@@ -33,7 +33,8 @@
     "promptscript:check": "node scripts/check-promptscript.mjs",
     "verify:artifact": "node scripts/verify-artifact.mjs",
     "verify:repository": "node scripts/validate-repository.mjs",
-    "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run verify:artifact && npm run verify:repository && npm run promptscript:check"
+    "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run test:companion && npm run build && npm run verify:artifact && npm run verify:repository && npm run promptscript:check",
+    "test:companion": "cd companion && npm test"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.6",

@@ -1,0 +1,21 @@
+{
+  "name": "markquire-companion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Optional self-hosted companion service for MarkQuire: CRDT relay, Drive change webhooks, AI proxy, and search index.",
+  "type": "module",
+  "main": "src/server.mjs",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "lib0": "^0.2.99",
+    "ws": "^8.18.0",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.20"
+  }
+}
