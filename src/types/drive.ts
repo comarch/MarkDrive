@@ -19,6 +19,7 @@ export interface DriveFileMetadata {
   name: string;
   mimeType: string;
   modifiedTime?: string;
+  headRevisionId?: string;
   webViewLink?: string;
   parents?: string[];
   capabilities?: {
