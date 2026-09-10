@@ -7,6 +7,7 @@ interface CommentsSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   comments: DriveComment[];
+  fileId: string | null;
   selectedCommentId: string | null;
   onSelectComment: (commentId: string | null) => void;
   onReplyComment: (commentId: string, content: string) => Promise<void>;
@@ -28,6 +29,7 @@ export const CommentsSidebar: React.FC<CommentsSidebarProps> = ({
   isOpen,
   onClose,
   comments,
+  fileId,
   selectedCommentId,
   onSelectComment,
   onReplyComment,
@@ -139,6 +141,7 @@ export const CommentsSidebar: React.FC<CommentsSidebarProps> = ({
             <CommentThread
               key={comment.id}
               comment={comment}
+              fileId={fileId}
               isSelected={comment.id === selectedCommentId}
               onSelect={() => onSelectComment(comment.id)}
               onReply={onReplyComment}

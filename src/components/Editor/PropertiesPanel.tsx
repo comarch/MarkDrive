@@ -1,5 +1,10 @@
 import React, { useState } from "react";
 import { X, FileCog } from "lucide-react";
+import {
+  REVIEW_STATUS_FIELD,
+  REVIEW_STATUSES,
+  reviewStatusLabel,
+} from "../../utils/reviewStatus";
 
 interface PropertiesPanelProps {
   isOpen: boolean;
@@ -25,6 +30,47 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
   const entries = Object.entries(fields);
   const hasNewKey = newKey.trim().length > 0 && !(newKey.trim() in fields);
+
+  // Review status gets a select; other strings stay plain inputs; anything
+  // richer stays read-only so the raw block is never reformatted by accident.
+  const renderValue = (key: string, value: unknown) => {
+    if (key === REVIEW_STATUS_FIELD && typeof value === "string") {
+      return (
+        <select
+          value={value}
+          onChange={(e) => onUpdateField(key, e.target.value)}
+          aria-label="Review status"
+          className="flex-1 min-w-0 text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
+        >
+          {REVIEW_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {reviewStatusLabel(status)}
+            </option>
+          ))}
+          {/* Preserve unknown custom values instead of dropping them. */}
+          {!REVIEW_STATUSES.includes(value as never) && (
+            <option value={value}>{value}</option>
+          )}
+        </select>
+      );
+    }
+    if (typeof value === "string") {
+      return (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onUpdateField(key, e.target.value)}
+          aria-label={`Value for ${key}`}
+          className="flex-1 min-w-0 text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
+        />
+      );
+    }
+    return (
+      <code className="flex-1 min-w-0 text-[11px] text-slate-500 dark:text-slate-400 truncate">
+        {JSON.stringify(value)}
+      </code>
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
@@ -59,19 +105,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 w-28 shrink-0 truncate">
                 {key}
               </span>
-              {typeof value === "string" ? (
-                <input
-                  type="text"
-                  value={value}
-                  onChange={(e) => onUpdateField(key, e.target.value)}
-                  aria-label={`Value for ${key}`}
-                  className="flex-1 min-w-0 text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                />
-              ) : (
-                <code className="flex-1 min-w-0 text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                  {JSON.stringify(value)}
-                </code>
-              )}
+              {renderValue(key, value)}
             </div>
           ))}
 

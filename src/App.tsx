@@ -28,14 +28,20 @@ import { HistorySidebar } from "./components/Modals/HistorySidebar";
 import { FileBrowserModal } from "./components/Modals/FileBrowserModal";
 import { PropertiesPanel } from "./components/Editor/PropertiesPanel";
 import { TableToolbar } from "./components/Editor/TableToolbar";
+import { ReviewQueueModal } from "./components/Modals/ReviewQueueModal";
 
 import { authService } from "./services/googleAuth";
 import { driveService } from "./services/googleDrive";
 import { commentsService } from "./services/googleComments";
-import { parseDriveStateFromUrl, updateUrlFileId } from "./services/driveState";
+import {
+  parseDriveStateFromUrl,
+  updateUrlFileId,
+  parseLineAnchorFromUrl,
+} from "./services/driveState";
 import { SAMPLE_MARKDOWN } from "./utils/sampleDocument";
 import { toggleTaskLine } from "./utils/tasks";
 import { parseFrontmatter, updateFrontmatterField } from "./utils/frontmatter";
+import { REVIEW_STATUS_FIELD } from "./utils/reviewStatus";
 import { applyTableAction, type TableAction } from "./utils/tableUtils";
 import {
   applySuggestionHunks,
@@ -155,6 +161,12 @@ export const App: React.FC = () => {
   // Frontmatter properties panel
   const [isPropertiesOpen, setIsPropertiesOpen] = useState(false);
 
+  // Review workflow: queue modal and passage deep link anchor
+  const [isReviewQueueOpen, setIsReviewQueueOpen] = useState(false);
+  // Passage deep link (#line=N), parsed once on mount.
+  const [lineAnchor] = useState<number | null>(() => parseLineAnchorFromUrl());
+  const lineAnchorAppliedRef = useRef(false);
+
   // Table context toolbar
   const [tableContext, setTableContext] = useState<TableCursorContext | null>(
     null,
@@ -188,6 +200,15 @@ export const App: React.FC = () => {
     setSuggestionError(null);
     setSuggestionBase(null);
   }, []);
+
+  // Passage deep link: scroll the editor to the linked line once the
+  // document text is available.
+  useEffect(() => {
+    if (lineAnchor === null || lineAnchorAppliedRef.current) return;
+    if (content.length === 0) return;
+    lineAnchorAppliedRef.current = true;
+    editorRef.current?.scrollToLine(lineAnchor);
+  }, [lineAnchor, content]);
 
   // Sync theme with DOM
   useEffect(() => {
@@ -854,6 +875,12 @@ export const App: React.FC = () => {
     [content],
   );
 
+  // Review status pill in the header, from the frontmatter field
+  const reviewStatus = useMemo(() => {
+    const value = frontmatterFields[REVIEW_STATUS_FIELD];
+    return typeof value === "string" && value ? value : null;
+  }, [frontmatterFields]);
+
   // Table context toolbar actions rewrite the table block around the cursor
   const handleTableAction = (action: TableAction) => {
     const updated = applyTableAction(content, tableContext?.line ?? 0, action);
@@ -920,6 +947,8 @@ export const App: React.FC = () => {
         saveStatus={saveStatus}
         editingMode={editingMode}
         onChangeEditingMode={handleEditingModeChange}
+        reviewStatus={reviewStatus}
+        onOpenReviewQueue={() => setIsReviewQueueOpen(true)}
         user={user}
         fileMetadata={fileMetadata}
         isDark={isDark}
@@ -1067,6 +1096,7 @@ export const App: React.FC = () => {
           isOpen={isCommentsOpen}
           onClose={() => setIsCommentsOpen(false)}
           comments={comments}
+          fileId={fileMetadata?.id ?? null}
           selectedCommentId={selectedCommentId}
           onSelectComment={setSelectedCommentId}
           onReplyComment={handleReplyComment}
@@ -1132,6 +1162,13 @@ export const App: React.FC = () => {
         onClose={() => setIsPropertiesOpen(false)}
         fields={frontmatterFields}
         onUpdateField={handleUpdateFrontmatterField}
+      />
+
+      {/* Review queue of documents marked in review */}
+      <ReviewQueueModal
+        isOpen={isReviewQueueOpen}
+        onClose={() => setIsReviewQueueOpen(false)}
+        onOpenFile={handleOpenFile}
       />
 
       {/* Save Conflict Resolution Modal */}

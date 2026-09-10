@@ -5,13 +5,18 @@ import {
   CornerDownRight,
   Send,
   RotateCcw,
+  Link2,
+  Check,
 } from "lucide-react";
 import { DriveComment } from "../../types/drive";
 import { parseSuggestions } from "../../utils/patch";
+import { splitMentions } from "../../utils/mentions";
+import { buildPassageLink } from "../../services/driveState";
 import { SuggestionCard } from "./SuggestionCard";
 
 interface CommentThreadProps {
   comment: DriveComment;
+  fileId: string | null;
   onReply: (commentId: string, content: string) => Promise<void>;
   onResolve: (commentId: string) => Promise<void>;
   onReopen: (commentId: string) => Promise<void>;
@@ -26,8 +31,37 @@ interface CommentThreadProps {
   onSelect?: () => void;
 }
 
+/** Renders a comment body with @mentions highlighted. */
+const MentionedText: React.FC<{ text: string }> = ({ text }) => {
+  // Segments carry no id, so keys pair the text with an occurrence number
+  // to stay unique when the same mention appears twice.
+  const seen = new Map<string, number>();
+  return (
+    <>
+      {splitMentions(text).map((segment) => {
+        const base = `${segment.isMention ? "m" : "t"}-${segment.text}`;
+        const occurrence = (seen.get(base) ?? 0) + 1;
+        seen.set(base, occurrence);
+        return (
+          <span
+            key={`${base}#${occurrence}`}
+            className={
+              segment.isMention
+                ? "px-1 mx-0.5 rounded bg-brand-100 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 font-medium"
+                : undefined
+            }
+          >
+            {segment.text}
+          </span>
+        );
+      })}
+    </>
+  );
+};
+
 export const CommentThread: React.FC<CommentThreadProps> = ({
   comment,
+  fileId,
   onReply,
   onResolve,
   onReopen,
@@ -41,12 +75,41 @@ export const CommentThread: React.FC<CommentThreadProps> = ({
   const [replyText, setReplyText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showReplyBox, setShowReplyBox] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Suggestion payloads carry a readable summary line plus the patch.
   const suggestionHunks = parseSuggestions(comment.content);
   const plainContent = suggestionHunks
     ? (comment.content.split("\n")[0] ?? "")
     : comment.content;
+
+  // Passage deep links need an anchored line to point at.
+  const anchorMatch = comment.anchor
+    ? (() => {
+        try {
+          const parsed = JSON.parse(comment.anchor) as {
+            region?: { line?: unknown };
+          };
+          const line = parsed?.region?.line;
+          return typeof line === "number" && line > 0 ? line : null;
+        } catch {
+          return null;
+        }
+      })()
+    : null;
+
+  const copyPassageLink = async () => {
+    if (anchorMatch === null) return;
+    const link = buildPassageLink(fileId, anchorMatch);
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      // Clipboard permission denied; the link stays unshared.
+      return;
+    }
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 1500);
+  };
 
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,11 +181,24 @@ export const CommentThread: React.FC<CommentThreadProps> = ({
           </div>
         </div>
 
-        {/* Actions (Resolve / Reopen / Delete) */}
+        {/* Actions (Resolve / Reopen / Link / Delete) */}
         <div
           className="flex items-center gap-1"
           onClick={(e) => e.stopPropagation()}
         >
+          {anchorMatch !== null && (
+            <button
+              onClick={() => void copyPassageLink()}
+              title="Copy link to this passage"
+              className="p-1 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 rounded"
+            >
+              {linkCopied ? (
+                <Check className="w-3.5 h-3.5 text-emerald-500" />
+              ) : (
+                <Link2 className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
           {comment.resolved ? (
             <button
               onClick={() => onReopen(comment.id)}
@@ -153,7 +229,7 @@ export const CommentThread: React.FC<CommentThreadProps> = ({
 
       {/* Comment Body */}
       <div className="mt-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed break-words whitespace-pre-wrap">
-        {plainContent}
+        <MentionedText text={plainContent} />
       </div>
 
       {/* Suggestion patch card */}
@@ -188,7 +264,7 @@ export const CommentThread: React.FC<CommentThreadProps> = ({
                 )}
               </div>
               <div className="mt-0.5 text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">
-                {reply.content}
+                <MentionedText text={reply.content} />
               </div>
             </div>
           ))}
