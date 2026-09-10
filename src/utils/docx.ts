@@ -1,6 +1,5 @@
-import MarkdownIt from "markdown-it";
+import MarkdownIt, { Token } from "markdown-it";
 import taskLists from "markdown-it-task-lists";
-import { Token } from "markdown-it";
 
 // DOCX export built from the markdown-it token stream. The ZIP writer is
 // hand-rolled (stored entries, no compression, fixed timestamps) so the
@@ -233,6 +232,81 @@ const headingStyle = (tag: string): string | null => {
   return match ? `Heading${match[1]}` : null;
 };
 
+// Mutable state for the table token handler, so the main token walk
+// stays flat while tables build up incrementally.
+interface TableState {
+  header: string[] | null;
+  rows: string[][] | null;
+  row: string[] | null;
+  cellRuns: DocxRun[] | null;
+}
+
+const createTableState = (): TableState => ({
+  header: null,
+  rows: null,
+  row: null,
+  cellRuns: null,
+});
+
+// Consumes the table-related tokens; returns nothing, callers route
+// every table token here and keep everything else for themselves.
+const handleTableToken = (
+  state: TableState,
+  token: Token,
+  model: DocxModel,
+): void => {
+  switch (token.type) {
+    case "table_open":
+      state.header = null;
+      state.rows = [];
+      break;
+    case "thead_open":
+      state.header = [];
+      state.row = state.header;
+      break;
+    case "thead_close":
+    case "tbody_open":
+    case "tr_close":
+      state.row = null;
+      break;
+    case "tr_open":
+      // tr_open starts the next row; header rows reuse the header
+      // array, body rows get a fresh one.
+      if (state.row === state.header && state.header) {
+        state.row = state.header;
+      } else if (state.rows) {
+        state.row = [];
+        state.rows.push(state.row);
+      }
+      break;
+    case "th_open":
+    case "td_open":
+      state.cellRuns = [];
+      break;
+    case "th_close":
+    case "td_close":
+      if (state.cellRuns && state.row) {
+        state.row.push(
+          state.cellRuns
+            .map((run) => run.text)
+            .join("")
+            .trim(),
+        );
+      }
+      state.cellRuns = null;
+      break;
+    case "table_close":
+      if (state.header && state.rows) {
+        model.tables.push({ header: state.header, rows: state.rows });
+      }
+      state.header = null;
+      state.rows = null;
+      break;
+    default:
+      break;
+  }
+};
+
 /**
  * Converts Markdown into the paragraph and table model that mirrors into
  * word/document.xml. Unknown constructs degrade to plain text runs.
@@ -250,11 +324,8 @@ export const markdownToDocxModel = (markdown: string): DocxModel => {
   let ordered = false;
   let orderedCounter = 0;
 
-  // Table state machine.
-  let tableHeader: string[] | null = null;
-  let tableRows: string[][] | null = null;
-  let currentRow: string[] | null = null;
-  let currentCellRuns: DocxRun[] | null = null;
+  // Table state machine, owned by the table token handler below.
+  const table = createTableState();
 
   const flush = () => {
     if (pendingRuns !== null) {
@@ -283,13 +354,13 @@ export const markdownToDocxModel = (markdown: string): DocxModel => {
         flush();
         break;
       case "inline":
-        if (currentCellRuns !== null) {
-          currentCellRuns.push(
+        if (table.cellRuns !== null) {
+          table.cellRuns.push(
             ...inlineRuns(token.children ?? [], model.hyperlinks),
           );
         } else {
           const runs = inlineRuns(token.children ?? [], model.hyperlinks);
-          if (pendingRuns === null) pendingRuns = [];
+          pendingRuns ??= [];
           pendingRuns.push(...runs);
         }
         break;
@@ -327,54 +398,17 @@ export const markdownToDocxModel = (markdown: string): DocxModel => {
         model.paragraphs.push({ runs: [], border: true });
         break;
       case "table_open":
-        tableHeader = null;
-        tableRows = [];
-        break;
       case "thead_open":
-        tableHeader = [];
-        currentRow = tableHeader;
-        break;
       case "thead_close":
-        currentRow = null;
-        break;
       case "tbody_open":
-        currentRow = null;
-        break;
       case "tr_open":
-        // tr_open starts the next row; header rows reuse the header
-        // array, body rows get a fresh one.
-        if (currentRow === tableHeader && tableHeader) {
-          currentRow = tableHeader;
-        } else if (tableRows) {
-          currentRow = [];
-          tableRows.push(currentRow);
-        }
-        break;
       case "tr_close":
-        currentRow = null;
-        break;
       case "th_open":
       case "td_open":
-        currentCellRuns = [];
-        break;
       case "th_close":
       case "td_close":
-        if (currentCellRuns && currentRow) {
-          currentRow.push(
-            currentCellRuns
-              .map((run) => run.text)
-              .join("")
-              .trim(),
-          );
-        }
-        currentCellRuns = null;
-        break;
       case "table_close":
-        if (tableHeader && tableRows) {
-          model.tables.push({ header: tableHeader, rows: tableRows });
-        }
-        tableHeader = null;
-        tableRows = null;
+        handleTableToken(table, token, model);
         break;
       default:
         break;

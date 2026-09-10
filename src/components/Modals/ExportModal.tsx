@@ -56,12 +56,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
         <div className="p-5 space-y-3">
           {/* Option 1: Markdown file */}
-          <div
+          <button
+            type="button"
             onClick={() => {
               exportAsMarkdown(documentTitle, markdownContent);
               onClose();
             }}
-            className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition"
+            className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition w-full text-left bg-transparent"
           >
             <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center shrink-0">
               <FileText className="w-5 h-5" />
@@ -74,15 +75,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 {t("export.markdownDesc")}
               </div>
             </div>
-          </div>
+          </button>
 
           {/* Option 2: Styled HTML */}
-          <div
+          <button
+            type="button"
             onClick={() => {
               void exportAsHtml(documentTitle, markdownContent);
               onClose();
             }}
-            className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition"
+            className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition w-full text-left bg-transparent"
           >
             <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center shrink-0">
               <Globe className="w-5 h-5" />
@@ -95,15 +97,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 {t("export.htmlDesc")}
               </div>
             </div>
-          </div>
+          </button>
 
           {/* Option 3: Word document */}
-          <div
+          <button
+            type="button"
             onClick={() => {
               exportAsDocx(documentTitle, markdownContent);
               onClose();
             }}
-            className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition"
+            className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition w-full text-left bg-transparent"
           >
             <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 flex items-center justify-center shrink-0">
               <FileDown className="w-5 h-5" />
@@ -116,16 +119,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 {t("export.docxDesc")}
               </div>
             </div>
-          </div>
+          </button>
 
           {/* Option 4: Google Docs conversion in Drive */}
           {onExportGoogleDocs && (
-            <div
+            <button
+              type="button"
               onClick={() => {
                 void onExportGoogleDocs();
                 onClose();
               }}
-              className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition"
+              className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition w-full text-left bg-transparent"
             >
               <div className="w-10 h-10 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 flex items-center justify-center shrink-0">
                 <CloudUpload className="w-5 h-5" />
@@ -138,26 +142,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   {t("export.gdocsDesc")}
                 </div>
               </div>
-            </div>
+            </button>
           )}
 
           {/* Option 5: Static site from the Drive folder */}
           {onExportStaticSite && (
-            <div
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
               onClick={() => {
                 void onExportStaticSite();
                 onClose();
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  void onExportStaticSite();
-                  onClose();
-                }
-              }}
-              className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition"
+              className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition w-full text-left bg-transparent"
             >
               <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/40 text-orange-600 flex items-center justify-center shrink-0">
                 <FolderArchive className="w-5 h-5" />
@@ -170,16 +166,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   {t("export.siteDesc")}
                 </div>
               </div>
-            </div>
+            </button>
           )}
 
           {/* Option 6: Print / PDF */}
-          <div
+          <button
+            type="button"
             onClick={() => {
               onClose();
               setTimeout(() => exportAsPdf(), 200);
             }}
-            className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition"
+            className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition w-full text-left bg-transparent"
           >
             <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center shrink-0">
               <Printer className="w-5 h-5" />
@@ -192,7 +189,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 {t("export.pdfDesc")}
               </div>
             </div>
-          </div>
+          </button>
         </div>
       </div>
     </div>

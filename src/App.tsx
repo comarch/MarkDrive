@@ -41,6 +41,14 @@ import {
 import { authService } from "./services/googleAuth";
 import { driveService } from "./services/googleDrive";
 import { AI_BUILD_ENABLED, defaultAISettings } from "./services/ai";
+import {
+  enqueueSave,
+  isNetworkError,
+  listQueuedSaves,
+  removeQueuedSave,
+  replayQueue as replayQueuedSaves,
+  type OfflineSaveEntry,
+} from "./services/offlineQueue";
 import { AIPanel } from "./components/AI/AIPanel";
 import { commentsService } from "./services/googleComments";
 import {
@@ -81,6 +89,14 @@ import {
   AppSettings,
   OutlineItem,
 } from "./types/editor";
+
+/**
+ * Allow-list for links that may open after a Drive export: the API
+ * response is external input, so only Google-owned hosts pass.
+ */
+const isGoogleHost = (hostname: string): boolean =>
+  /(^|\.)google\.com$/.test(hostname) ||
+  /(^|\.)googleusercontent\.com$/.test(hostname);
 
 const DEFAULT_SETTINGS: AppSettings = {
   googleClientId: authService.getClientId(),
@@ -350,6 +366,32 @@ export const App: React.FC = () => {
     [content, selection],
   );
 
+  // Google Docs export: Drive converts an uploaded copy, the Markdown
+  // original stays untouched.
+  const handleExportGoogleDocs = useCallback(async () => {
+    try {
+      const metadata = await driveService.createGoogleDocsFile(
+        documentTitle,
+        content,
+        fileMetadata?.parents?.[0],
+      );
+      // The view link comes from the Drive API response, so it only
+      // opens after passing an allow-list check for Google hosts.
+      if (metadata.webViewLink) {
+        try {
+          const url = new URL(metadata.webViewLink);
+          if (url.protocol === "https:" && isGoogleHost(url.hostname)) {
+            window.open(url.toString(), "_blank", "noopener,noreferrer");
+          }
+        } catch {
+          // A malformed link is skipped; the export itself succeeded.
+        }
+      }
+    } catch (error) {
+      console.error("Google Docs export failed:", error);
+    }
+  }, [content, documentTitle, fileMetadata]);
+
   // Passage deep link: scroll the editor to the linked line once the
   // document text is available.
   useEffect(() => {
@@ -486,9 +528,91 @@ export const App: React.FC = () => {
       setSaveStatus("saved");
     } catch (err) {
       console.error("Save failed:", err);
+      // Offline: queue the save and replay it on reconnect instead of
+      // surfacing a hard error the user cannot act on.
+      if (fileMetadata && isNetworkError(err)) {
+        try {
+          await enqueueSave({
+            fileId: fileMetadata.id,
+            name: documentTitle,
+            content,
+            baseRevisionId: fileMetadata.headRevisionId ?? null,
+            baseContent: lastSyncedContentRef.current,
+            savedAt: new Date().toISOString(),
+          });
+          setSaveStatus("offline");
+          return;
+        } catch (queueError) {
+          console.error("Offline queue write failed:", queueError);
+        }
+      }
       setSaveStatus("error");
     }
   }, [content, documentTitle, fileMetadata]);
+
+  // Replays queued offline saves when the network returns. The first
+  // conflict opens the merge dialog; the rest stay queued.
+  const replayOfflineSaves = useCallback(async () => {
+    let queued: OfflineSaveEntry[];
+    try {
+      queued = await listQueuedSaves();
+    } catch {
+      return; // no queue support (private mode): nothing to replay
+    }
+    if (queued.length === 0) return;
+    const result = await replayQueuedSaves(queued, {
+      fetchHeadRevisionId: (fileId) => driveService.fetchHeadRevisionId(fileId),
+      getFile: (fileId) => driveService.getFile(fileId),
+      updateFile: (fileId, content, name) =>
+        driveService.updateFile(fileId, content, name),
+    });
+    for (const entry of result.replayed) {
+      await removeQueuedSave(entry.fileId);
+      if (fileMetadata?.id === entry.fileId) {
+        // The open document reached Drive; refresh its synced base.
+        const updated = await driveService
+          .getFile(entry.fileId)
+          .catch(() => null);
+        if (updated) {
+          setFileMetadata((prev) =>
+            prev ? { ...prev, ...updated.metadata } : updated.metadata,
+          );
+          lastSyncedContentRef.current = updated.content;
+        }
+        setSaveStatus("saved");
+      }
+    }
+    const conflict = result.conflicts[0];
+    if (conflict && !isConflictOpenRef.current) {
+      if (conflict.entry.fileId === fileMetadata?.id) {
+        setConflict({
+          baseContent: conflict.entry.baseContent,
+          remoteContent: conflict.remoteContent,
+        });
+        isConflictOpenRef.current = true;
+        setSaveStatus("unsaved");
+        await removeQueuedSave(conflict.entry.fileId);
+      }
+      // Conflicts on other files stay queued; they surface when those
+      // files open and save.
+    }
+    if (
+      result.replayed.length > 0 &&
+      result.conflicts.length === 0 &&
+      result.failures.length === 0 &&
+      fileMetadata
+    ) {
+      setSaveStatus((status) => (status === "offline" ? "saved" : status));
+    }
+  }, [fileMetadata]);
+
+  useEffect(() => {
+    const onOnline = () => {
+      void replayOfflineSaves();
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [replayOfflineSaves]);
 
   // Auto-save timers must call the latest save handler; a plain closure
   // would capture stale content from the render that scheduled the timer.
@@ -1576,6 +1700,7 @@ export const App: React.FC = () => {
         onExportStaticSite={
           fileMetadata?.parents?.[0] ? handleExportStaticSite : undefined
         }
+        onExportGoogleDocs={handleExportGoogleDocs}
       />
     </div>
   );

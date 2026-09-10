@@ -291,7 +291,8 @@ export class GoogleDriveService {
     const token = authService.getAccessToken();
 
     if (!token || token.startsWith("mock_google_token_")) {
-      const id = "mock_docs_" + Math.random().toString(36).substring(2, 10);
+      const id =
+        "mock_docs_" + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
       const metadata: DriveFileMetadata = {
         id,
         name: name.replace(/\.(md|markdown|docx)$/i, ""),
