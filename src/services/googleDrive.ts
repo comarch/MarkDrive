@@ -226,6 +226,65 @@ export class GoogleDriveService {
   }
 
   /**
+   * Uploads an image file to Google Drive.
+   */
+  public async uploadImageFile(
+    file: File,
+    folderId?: string,
+  ): Promise<DriveFileMetadata> {
+    const token = authService.getAccessToken();
+
+    if (!token || token.startsWith("mock_google_token_")) {
+      throw new Error("Image upload requires signing in to Google Drive.");
+    }
+
+    const metadata: Record<string, unknown> = {
+      name: file.name,
+      mimeType: file.type,
+    };
+    if (folderId) {
+      metadata.parents = [folderId];
+    }
+
+    const boundary = "-------314159265358979323846";
+    const delimiter = `\r\n--${boundary}\r\n`;
+    const closeDelimiter = `\r\n--${boundary}--`;
+    const fileContent = await file.arrayBuffer();
+    const multipartRequestBody = new Blob(
+      [
+        delimiter +
+          "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
+          JSON.stringify(metadata) +
+          delimiter +
+          `Content-Type: ${file.type}\r\n\r\n`,
+        fileContent,
+        closeDelimiter,
+      ],
+      { type: `multipart/related; boundary=${boundary}` },
+    );
+
+    const res = await fetch(
+      `${UPLOAD_API_BASE}/files?uploadType=multipart&fields=id,name,mimeType,webViewLink`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": `multipart/related; boundary=${boundary}`,
+        },
+        body: multipartRequestBody,
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `Failed to upload image to Google Drive: ${res.statusText}`,
+      );
+    }
+
+    return await res.json();
+  }
+
+  /**
    * Renames a file on Google Drive
    */
   public async renameFile(
