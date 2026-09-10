@@ -1,0 +1,29 @@
+{
+  "name": "Comarch MarkQuire - Markdown Editor for Google Drive",
+  "version": "0.1.0",
+  "description": "Drive-native Markdown authoring and review for Google Workspace teams. Create, preview, comment on, and export portable .md files.",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/userinfo.email"
+  ],
+  "driveExtension": {
+    "name": "Comarch MarkQuire",
+    "description": "Create, preview, review, and export Markdown files directly from Google Drive",
+    "icons": {
+      "icon16": "https://comarch.github.io/MarkQuire/icons/icon-16.png",
+      "icon32": "https://comarch.github.io/MarkQuire/icons/icon-32.png",
+      "icon128": "https://comarch.github.io/MarkQuire/icons/icon-128.png"
+    },
+    "createUrl": "https://comarch.github.io/MarkQuire/?state=${state}",
+    "openUrl": "https://comarch.github.io/MarkQuire/?state=${state}",
+    "defaultMimeTypes": ["text/markdown", "text/x-markdown", "text/plain"],
+    "defaultFileExtensions": ["md", "markdown"],
+    "secondaryMimeTypes": ["text/plain"],
+    "secondaryFileExtensions": ["txt"]
+  },
+  "visibility": "DOMAIN_INSTALLABLE",
+  "support": {
+    "developerEmail": "wojciech.guziak@comarch.com"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "baseBranchPatterns": ["main"],
+  "schedule": ["at any time"],
+  "enabledManagers": ["npm", "github-actions", "dockerfile"],
+  "dependencyDashboard": true,
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 10,
+  "rebaseWhen": "behind-base-branch",
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "packageRules": [
+    {
+      "description": "Use release scope for production dependencies",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["dependencies"],
+      "semanticCommitScope": "deps"
+    },
+    {
+      "description": "Keep development dependency updates maintenance-only",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "semanticCommitScope": "deps-dev"
+    },
+    {
+      "description": "Keep GitHub Actions updates maintenance-only",
+      "matchManagers": ["github-actions"],
+      "semanticCommitScope": "ci"
+    },
+    {
+      "description": "Keep Dockerfile updates maintenance-only",
+      "matchManagers": ["dockerfile"],
+      "semanticCommitScope": "docker"
+    },
+    {
+      "description": "Release production lockfile maintenance",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "semanticCommitScope": "deps"
+    },
+    {
+      "description": "Keep non-major dependency updates manual during bootstrap",
+      "matchManagers": ["npm", "github-actions", "dockerfile"],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest",
+        "replacement",
+        "rollback",
+        "bump",
+        "lockFileMaintenance"
+      ],
+      "automerge": false,
+      "ignoreTests": false
+    }
+  ]
+}

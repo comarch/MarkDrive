@@ -1,0 +1,27 @@
+/// <reference types="vitest" />
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+// GitHub Pages serves the app from a repository subpath, container and
+// custom-domain deployments serve it from the root.
+const basePath = process.env.MARKQUIRE_BASE_PATH ?? "/";
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  base: basePath,
+  plugins: [react()],
+  server: {
+    port: 3000,
+  },
+  preview: {
+    port: 3000,
+  },
+  test: {
+    environment: "jsdom",
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      exclude: ["node_modules/**", "dist/**", "public/**", "**/*.d.ts"],
+    },
+  },
+});

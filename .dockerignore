@@ -1,0 +1,14 @@
+.code-review-graph
+.git
+.github
+.worktrees
+coverage
+dist
+docs
+node_modules
+
+.env
+.env.*
+
+*.log
+.DS_Store

@@ -1,0 +1,30 @@
+{
+  "name": "Comarch MarkQuire",
+  "short_name": "MarkQuire",
+  "description": "Drive-native Markdown editing and review for Google Workspace teams.",
+  "icons": [
+    {
+      "src": "icons/icon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#087fc4",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}

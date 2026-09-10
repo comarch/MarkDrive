@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased select-none;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+/* Markdown preview prose styling */
+.markdown-body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica,
+    Arial, sans-serif;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.markdown-body h1 {
+  @apply text-3xl font-bold pb-2 mb-4 mt-6 border-b border-slate-200 dark:border-slate-700;
+}
+.markdown-body h2 {
+  @apply text-2xl font-bold pb-1.5 mb-3 mt-5 border-b border-slate-200 dark:border-slate-700;
+}
+.markdown-body h3 {
+  @apply text-xl font-semibold mb-2 mt-4;
+}
+.markdown-body h4 {
+  @apply text-lg font-semibold mb-2 mt-3;
+}
+.markdown-body p {
+  @apply mb-4 text-slate-700 dark:text-slate-300;
+}
+.markdown-body blockquote {
+  @apply border-l-4 border-brand-500 pl-4 py-1 my-3 bg-slate-50 dark:bg-slate-800/50 rounded-r text-slate-600 dark:text-slate-400 italic;
+}
+.markdown-body ul {
+  @apply list-disc list-inside mb-4 space-y-1 text-slate-700 dark:text-slate-300 pl-2;
+}
+.markdown-body ol {
+  @apply list-decimal list-inside mb-4 space-y-1 text-slate-700 dark:text-slate-300 pl-2;
+}
+.markdown-body li > ul,
+.markdown-body li > ol {
+  @apply pl-6 mb-0 mt-1;
+}
+.markdown-body table {
+  @apply w-full border-collapse my-4 text-sm text-left;
+}
+.markdown-body table th {
+  @apply bg-slate-100 dark:bg-slate-800 font-semibold p-2.5 border border-slate-300 dark:border-slate-700;
+}
+.markdown-body table td {
+  @apply p-2.5 border border-slate-300 dark:border-slate-700;
+}
+.markdown-body table tr:nth-child(even) {
+  @apply bg-slate-50/50 dark:bg-slate-800/20;
+}
+.markdown-body pre {
+  @apply bg-slate-900 text-slate-100 p-4 rounded-lg my-4 overflow-x-auto text-sm font-mono border border-slate-800 shadow-sm;
+}
+.markdown-body code {
+  @apply font-mono text-sm;
+}
+.markdown-body :not(pre) > code {
+  @apply bg-slate-100 dark:bg-slate-800 text-pink-600 dark:text-pink-400 px-1.5 py-0.5 rounded text-xs border border-slate-200 dark:border-slate-700;
+}
+.markdown-body hr {
+  @apply my-6 border-slate-200 dark:border-slate-700;
+}
+.markdown-body img {
+  @apply max-w-full rounded-md my-3 shadow-sm inline-block;
+}
+.markdown-body a {
+  @apply text-brand-600 dark:text-brand-400 hover:underline cursor-pointer;
+}
+
+/* Task lists */
+.markdown-body .contains-task-list {
+  @apply list-none pl-0;
+}
+.markdown-body .task-list-item {
+  @apply flex items-center gap-2;
+}
+.markdown-body .task-list-item input[type="checkbox"] {
+  @apply rounded text-brand-600 focus:ring-brand-500 h-4 w-4 border-slate-300;
+}
+
+/* KaTeX formula container */
+.katex-display {
+  @apply overflow-x-auto py-2;
+}
+
+/* Comment highlights */
+.comment-highlight {
+  @apply bg-amber-200/60 dark:bg-amber-500/30 border-b-2 border-amber-500 cursor-pointer rounded-sm transition-colors;
+}
+.comment-highlight:hover,
+.comment-highlight.active {
+  @apply bg-amber-300/80 dark:bg-amber-400/50;
+}
+
+/* CodeMirror customizations */
+.cm-editor {
+  height: 100% !important;
+  font-family:
+    "JetBrains Mono", "Fira Code", Menlo, Monaco, Consolas, "Courier New",
+    monospace !important;
+  font-size: 14px !important;
+}
+.cm-scroller {
+  overflow: auto !important;
+  padding-bottom: 200px;
+}
+
+/* Print styling */
+@media print {
+  header,
+  nav,
+  .no-print,
+  .editor-pane,
+  .comments-sidebar,
+  .toolbar {
+    display: none !important;
+  }
+  body,
+  .preview-pane,
+  .markdown-body {
+    overflow: visible !important;
+    height: auto !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .preview-pane {
+    width: 100% !important;
+    padding: 0 !important;
+  }
+  .markdown-body {
+    max-width: 100% !important;
+  }
+}

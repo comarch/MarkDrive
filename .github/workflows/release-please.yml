@@ -1,0 +1,68 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Create release PR or release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check release credentials
+        id: credentials
+        env:
+          ENABLE_RELEASE_PLEASE: ${{ vars.ENABLE_RELEASE_PLEASE }}
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
+        run: |
+          if [[ "$ENABLE_RELEASE_PLEASE" == "true" && -n "$RELEASE_PAT" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release Please is disabled until ENABLE_RELEASE_PLEASE=true and RELEASE_PAT are configured"
+          fi
+
+      - name: Run Release Please
+        if: steps.credentials.outputs.enabled == 'true'
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.RELEASE_PAT }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Enable release PR auto-merge
+        if: steps.credentials.outputs.enabled == 'true' && vars.ENABLE_RELEASE_PR_AUTOMERGE == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+        run: |
+          release_pr_number="$(
+            gh pr list \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --state open \
+              --json number,title,labels \
+              --jq '.[] | select(.title | startswith("chore(main): release ")) | select([.labels[].name] | index("autorelease: pending")) | .number' |
+              head -n 1
+          )"
+
+          if [[ -z "$release_pr_number" ]]; then
+            echo "No open Release Please PR found"
+            exit 0
+          fi
+
+          gh pr merge "$release_pr_number" \
+            --repo "$GITHUB_REPOSITORY" \
+            --auto \
+            --squash

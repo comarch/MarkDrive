@@ -1,0 +1,13 @@
+@restrictions {
+  - "Never commit Google Client IDs, Client Secrets, tokens, cookies, private keys, or personal data"
+  - "Never print, upload, or transmit OAuth credentials or user access tokens"
+  - "Never add hidden telemetry, tracking, remote code, or unapproved external network requests"
+  - "Never execute untrusted downloaded code without explicit review"
+  - "Never interpolate untrusted issue, pull request, or fixture data into shell commands unsafely"
+  - "Never assume an optional capability exists without checking the live contract"
+  - "Never bypass tests, lint, typecheck, security, or artifact checks to make CI green"
+  - "Never edit generated instruction files or bundles by hand"
+  - "Never use mutable GitHub Action references when immutable pins are available"
+  - "Never publish, push, release, alter permissions, or change remote settings without explicit authorization"
+  - "Never use production credentials in pull request code from forks"
+}

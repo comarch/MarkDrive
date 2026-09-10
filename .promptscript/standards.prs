@@ -1,0 +1,41 @@
+@standards {
+  architecture: [
+    "Prefer existing shared types, adapters, helpers, and test utilities over duplicate abstractions",
+    "Keep pure logic separate from I/O, framework code, and external services",
+    "Keep Google Drive REST and OAuth interactions behind explicit service boundaries",
+    "Keep generated output tied to a documented source and build command"
+  ]
+
+  quality: [
+    "Use strict language and compiler settings where supported",
+    "Validate untrusted input at every external boundary (URL parameters, Google API responses)",
+    "Preserve backward compatibility for document formats and exported assets",
+    "Make unsupported, unavailable, offline, and empty states safe"
+  ]
+
+  testing: [
+    "Add focused regression coverage for every behavior change",
+    "Keep fixtures deterministic, minimal, and redacted",
+    "Run fast checks during development and the complete validation contract before merge",
+    "Mock external Google API calls in automated test suites"
+  ]
+
+  formatting: [
+    "Use Prettier for source, Markdown, JSON, YAML, and configuration",
+    "Use English for code comments, generated text, and user-facing copy",
+    "Use hyphens only in generated documentation and comments",
+    "Keep line endings and whitespace deterministic"
+  ]
+
+  git: {
+    format: "Conventional Commits"
+    subjectLimit: 72
+    allowedTypes: [feat, fix, docs, test, refactor, chore, ci, perf, revert]
+  }
+
+  documentation: [
+    "Update README, setup guides, or comments when user-visible behavior changes",
+    "Do not claim support or compatibility without a tested contract",
+    "Ask for minimal redacted reproductions in support channels"
+  ]
+}

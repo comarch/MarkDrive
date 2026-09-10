@@ -1,0 +1,68 @@
+# CodeRabbit AI review configuration.
+# Reference: https://docs.coderabbit.ai/reference/configuration
+
+language: en
+
+tone_instructions: >-
+  Report only verified, actionable findings. Skip hypothetical races,
+  speculative error handling, and out-of-scope suggestions. Focus on
+  correctness, XSS risks in markdown rendering, OAuth token safety, and
+  Drive API error handling.
+
+reviews:
+  profile: chill
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  path_filters:
+    - "!dist/**"
+    - "!coverage/**"
+    - "!package-lock.json"
+    - "!.promptscript/**"
+    - "!AGENTS.md"
+    - "!CLAUDE.md"
+    - "!.claude/**"
+    - "!.factory/**"
+    - "!CHANGELOG.md"
+  path_instructions:
+    - path: "src/services/googleAuth.ts"
+      instructions: >-
+        Google Identity Services (GIS) client token manager. Never leak access
+        tokens into logs, storage, or external URLs. Ensure clean token expiration
+        and revoke flows.
+    - path: "src/services/googleDrive.ts"
+      instructions: >-
+        Drive API v3 operations. Validate file metadata, MIME types, and multipart
+        upload payloads. Ensure non-2xx API responses throw typed DriveApiError
+        without leaking credentials.
+    - path: "src/services/googleComments.ts"
+      instructions: >-
+        Drive Comments API v3. Ensure quotedFileContent and anchor payloads conform
+        to Drive schema. Validate thread reply and resolution requests.
+    - path: "src/components/Preview/markdownParser.ts"
+      instructions: >-
+        Markdown-it pipeline with KaTeX and Mermaid. Sanitize raw HTML and guard
+        against DOM-based XSS in rendered markdown, math formulas, and code blocks.
+    - path: "src/components/Editor/**"
+      instructions: >-
+        CodeMirror 6 integration. Maintain smooth scrolling, selection synchronization,
+        and clean view destroy lifecycle on unmount.
+    - path: ".github/workflows/**"
+      instructions: >-
+        GitHub Actions automation. Immutable commit SHA pins required for all third-party
+        actions. Ensure least-privilege permissions and forbid untrusted PR step execution.
+  auto_review:
+    enabled: true
+    drafts: false
+  finishing_touches:
+    docstrings:
+      enabled: false
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    title:
+      mode: "warning"
+      requirements: Conventional Commits format, subject max 70 characters.
+
+chat:
+  auto_reply: true

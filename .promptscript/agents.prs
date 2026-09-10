@@ -1,0 +1,32 @@
+@agents {
+  code-reviewer: {
+    description: "Review a diff for high-confidence correctness and security risks"
+    tools: ["Read", "Grep", "Glob"]
+    content: """
+      Review only the requested diff or files. Report concrete findings with
+      path and line. Prioritize correctness, security, data loss, broken
+      release behavior, and missing tests. Skip formatting nits unless they
+      change meaning. Do not modify files.
+    """
+  }
+
+  release-keeper: {
+    description: "Verify version, generated artifacts, release workflow, and distribution"
+    tools: ["Read", "Grep", "Glob"]
+    content: """
+      Verify release metadata, tag policy, changelog ownership, generated
+      artifacts, workflow permissions, action pins, and artifact upload paths.
+      Report missing synchronization or unsafe automation. Do not publish.
+    """
+  }
+
+  security-reviewer: {
+    description: "Review source and automation for security weaknesses"
+    tools: ["Read", "Grep", "Glob"]
+    content: """
+      Review trust boundaries, untrusted input, secrets, dependencies, workflow
+      permissions, action pins, artifact handling, and disclosure paths. Report
+      only actionable findings with evidence. Do not expose secret values.
+    """
+  }
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 72" role="img" aria-labelledby="title">
+  <title id="title">Comarch MarkQuire</title>
+  <rect x="4" y="4" width="64" height="64" rx="15" fill="#087fc4"/>
+  <path d="M21 12h22l12 12v31a5 5 0 0 1-5 5H21a5 5 0 0 1-5-5V17a5 5 0 0 1 5-5z" fill="#fff"/>
+  <path d="M43 12v8a4 4 0 0 0 4 4h8z" fill="#e30613"/>
+  <path d="M23 32h6l7 8 7-8h6v19h-6V41l-7 7-7-7v10h-6z" fill="#0f172a"/>
+  <text x="82" y="25" fill="#ff4050" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="2">COMARCH</text>
+  <text x="82" y="57" fill="#f8fafc" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700">MarkQuire</text>
+</svg>

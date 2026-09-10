@@ -1,0 +1,61 @@
+@workflows {
+  feature: {
+    description: "Implement a focused user-facing or editor feature"
+    content: """
+      1. Read project instructions, README, relevant source, tests, and current workflows.
+      2. Identify the smallest correct architecture boundary.
+      3. Add focused tests before or with the behavior change.
+      4. Implement the smallest compatible change.
+      5. Update documentation, sample documents, and generated artifacts.
+      6. Run narrow checks, then the complete validation contract (`npm run validate`).
+      7. Review the diff for secrets, private data, unsafe input, and drift.
+      8. Stop before commit, push, release, or publication unless authorized.
+    """
+  }
+
+  bugfix: {
+    description: "Reproduce and fix an editor or Drive integration regression"
+    content: """
+      1. Create a minimal deterministic reproduction.
+      2. Write a failing focused test in `src/__tests__/`.
+      3. Find the first incorrect boundary or assumption.
+      4. Fix the root cause without widening unrelated behavior.
+      5. Run focused tests and the complete validation contract (`npm run validate`).
+      6. Update release notes or documentation when needed.
+    """
+  }
+
+  dependency: {
+    description: "Review a dependency update"
+    content: """
+      1. Identify production, development, CI, or build impact.
+      2. Check changelog, supported runtime, advisories, and breaking changes.
+      3. Run dependency review and the complete validation contract.
+      4. Inspect lockfile, generated artifacts, and bundle changes.
+      5. Keep major updates manual unless migration and rollback are proven.
+    """
+  }
+
+  release: {
+    description: "Prepare and verify a release"
+    content: """
+      1. Confirm Conventional Commits and release rules.
+      2. Run PromptScript validation and project validation contract.
+      3. Verify version, tag, changelog, generated files, and artifacts.
+      4. Let Release Please own version and changelog changes.
+      5. Verify publishing workflow checks tag and artifact (`dist/index.html`).
+      6. Stop before publishing unless explicitly authorized.
+    """
+  }
+
+  security: {
+    description: "Review security impact"
+    content: """
+      1. Identify assets, trust boundaries, OAuth scopes, and external APIs.
+      2. Check XSS in markdown rendering, OAuth token handling, and CSP headers.
+      3. Confirm least-privilege permissions and immutable action pins.
+      4. Add regression coverage or a security test case.
+      5. Keep vulnerability details private until coordinated disclosure.
+    """
+  }
+}

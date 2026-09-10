@@ -1,0 +1,36 @@
+@context {
+  project: "markquire"
+  purpose: "Open-source Markdown editor integrated with Google Drive and Google Workspace Marketplace"
+  language: "TypeScript"
+  runtime: "Node.js 22 (browser SPA build)"
+  packageManager: "npm"
+
+  architecture: {
+    source: "src/ (React 18, CodeMirror 6, markdown-it, KaTeX, Mermaid, Tailwind CSS)"
+    services: "src/services/ (googleAuth, googleDrive, googleComments, driveState)"
+    tests: "src/__tests__/ (Vitest unit and integration tests)"
+    docs: "README.md, CONTRIBUTING.md, GOOGLE_WORKSPACE_SETUP.md"
+    automation: ".github/workflows (ci, security, release-please)"
+    promptscript: ".promptscript source of truth for agent instructions"
+    generated: "dist/ compiled production SPA bundle"
+  }
+
+  """
+  ## Runtime flow
+
+  MarkQuire is loaded as a web application either standalone or via Google Drive UI integration
+  (New -> MarkQuire or Open with -> MarkQuire). The URL query parameter `state` contains the file ID
+  or target folder ID. The app authenticates with Google Identity Services (GIS), fetches the
+  file content via Drive API v3, displays an interactive CodeMirror 6 editor alongside a live
+  markdown-it/KaTeX/Mermaid preview, and syncs comments using the Drive Comments API.
+
+  ## Change boundaries
+
+  - Pure markdown parsing and rendering logic belongs in `src/components/Preview/markdownParser.ts`.
+  - Google Drive REST communication belongs strictly in `src/services/googleDrive.ts` and `src/services/googleComments.ts`.
+  - OAuth and GIS token management belongs in `src/services/googleAuth.ts`.
+  - UI components and modals belong in `src/components/`.
+  - Unit tests belong in `src/__tests__/`.
+  - Instructions source belongs in `.promptscript/`.
+  """
+}
