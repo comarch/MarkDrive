@@ -1,5 +1,12 @@
 import React from "react";
-import { X, FileText, Globe, Printer, Download } from "lucide-react";
+import {
+  X,
+  FileText,
+  Globe,
+  Printer,
+  Download,
+  FolderArchive,
+} from "lucide-react";
 import {
   exportAsMarkdown,
   exportAsHtml,
@@ -11,6 +18,7 @@ interface ExportModalProps {
   onClose: () => void;
   documentTitle: string;
   markdownContent: string;
+  onExportStaticSite?: () => void;
 }
 
 export const ExportModal: React.FC<ExportModalProps> = ({
@@ -18,6 +26,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   onClose,
   documentTitle,
   markdownContent,
+  onExportStaticSite,
 }) => {
   if (!isOpen) return null;
 
@@ -82,7 +91,40 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
           </div>
 
-          {/* Option 3: Print / PDF */}
+          {/* Option 3: Static site from the Drive folder */}
+          {onExportStaticSite && (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                void onExportStaticSite();
+                onClose();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  void onExportStaticSite();
+                  onClose();
+                }
+              }}
+              className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition"
+            >
+              <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/40 text-orange-600 flex items-center justify-center shrink-0">
+                <FolderArchive className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  Static site (folder)
+                </div>
+                <div className="text-xs text-slate-500">
+                  Browsable single-file site from every Markdown file in the
+                  Drive folder
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Option 4: Print / PDF */}
           <div
             onClick={() => {
               onClose();

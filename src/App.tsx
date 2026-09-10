@@ -31,6 +31,8 @@ import { TableToolbar } from "./components/Editor/TableToolbar";
 import { ReviewQueueModal } from "./components/Modals/ReviewQueueModal";
 import { TemplatesModal } from "./components/Modals/TemplatesModal";
 import { GraphModal } from "./components/Modals/GraphModal";
+import { PresentModal } from "./components/Present/PresentModal";
+import { exportAsStaticSite, type StaticSitePage } from "./utils/exportUtils";
 import {
   expandTemplateVariables,
   type DocumentTemplate,
@@ -179,6 +181,8 @@ export const App: React.FC = () => {
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   // Folder link graph modal
   const [isGraphOpen, setIsGraphOpen] = useState(false);
+  // Slide presentation mode
+  const [isPresentOpen, setIsPresentOpen] = useState(false);
   // Passage deep link (#line=N), parsed once on mount.
   const [lineAnchor] = useState<number | null>(() => parseLineAnchorFromUrl());
   const lineAnchorAppliedRef = useRef(false);
@@ -847,6 +851,39 @@ export const App: React.FC = () => {
     editorRef.current?.insertBlock(expanded);
   };
 
+  // Export every Markdown file in the document's Drive folder as a
+  // browsable single-file static site.
+  const handleExportStaticSite = async () => {
+    const folderId = fileMetadata?.parents?.[0];
+    if (!folderId) {
+      window.alert("Open a file from a Drive folder to export its site.");
+      return;
+    }
+    try {
+      const files = await driveService.listMarkdownFilesInFolder(folderId);
+      const pages: StaticSitePage[] = [];
+      for (const file of files.slice(0, 25)) {
+        if (!file.id) continue;
+        try {
+          const result = await driveService.getFile(file.id);
+          pages.push({ name: file.name, content: result.content });
+        } catch {
+          // Files that fail to load are left out of the site.
+        }
+      }
+      if (pages.length === 0) {
+        window.alert("No readable Markdown files in this folder.");
+        return;
+      }
+      await exportAsStaticSite(documentTitle.replace(/\.md$/i, ""), pages);
+    } catch (err) {
+      console.error("Static site export failed:", err);
+      window.alert(
+        err instanceof Error ? err.message : "Static site export failed.",
+      );
+    }
+  };
+
   // Comments Handlers
   const handleCreateComment = async (
     commentText: string,
@@ -1059,6 +1096,7 @@ export const App: React.FC = () => {
         onOpenReviewQueue={() => setIsReviewQueueOpen(true)}
         onOpenTemplates={() => setIsTemplatesOpen(true)}
         onOpenGraph={() => setIsGraphOpen(true)}
+        onPresent={() => setIsPresentOpen(true)}
         user={user}
         fileMetadata={fileMetadata}
         isDark={isDark}
@@ -1304,6 +1342,13 @@ export const App: React.FC = () => {
         onOpenFile={handleOpenFile}
       />
 
+      {/* Slide presentation of the open document */}
+      <PresentModal
+        isOpen={isPresentOpen}
+        onClose={() => setIsPresentOpen(false)}
+        content={content}
+      />
+
       {/* Save Conflict Resolution Modal */}
       {conflict !== null && (
         <ConflictModal
@@ -1337,6 +1382,9 @@ export const App: React.FC = () => {
         onClose={() => setIsExportOpen(false)}
         documentTitle={documentTitle}
         markdownContent={content}
+        onExportStaticSite={
+          fileMetadata?.parents?.[0] ? handleExportStaticSite : undefined
+        }
       />
     </div>
   );
