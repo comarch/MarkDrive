@@ -64,7 +64,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           {/* Option 2: Styled HTML */}
           <div
             onClick={() => {
-              exportAsHtml(documentTitle, markdownContent);
+              void exportAsHtml(documentTitle, markdownContent);
               onClose();
             }}
             className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 cursor-pointer transition"
@@ -77,7 +77,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 Styled HTML (.html)
               </div>
               <div className="text-xs text-slate-500">
-                HTML with layout styles and linked math and code styles
+                Self-contained HTML with math, code, and fonts inlined
               </div>
             </div>
           </div>
