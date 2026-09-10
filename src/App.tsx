@@ -358,6 +358,33 @@ export const App: React.FC = () => {
     }
   };
 
+  // Upload pasted or dropped images to Drive and reference them inline
+  const handleImagePaste = async (files: File[]) => {
+    if (!fileMetadata) {
+      window.alert(
+        "Image upload needs a Google Drive document. Sign in and open a Drive file first.",
+      );
+      return;
+    }
+    try {
+      for (const file of files) {
+        const uploaded = await driveService.uploadImageFile(
+          file,
+          fileMetadata.parents?.[0],
+        );
+        const altText = uploaded.name.replace(/[[\]]/g, "");
+        // The thumbnail endpoint renders Drive-hosted images in the browser
+        // more reliably than the legacy uc?export=view URLs.
+        const imageMarkdown = `![${altText}](https://drive.google.com/thumbnail?id=${uploaded.id}&sz=w2000)`;
+        editorRef.current?.insertText(`${imageMarkdown}\n\n`, "", "");
+      }
+      editorRef.current?.focus();
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      window.alert(err instanceof Error ? err.message : "Image upload failed.");
+    }
+  };
+
   // Synchronized Scrolling Handlers
   const handleEditorScroll = (pct: number) => {
     if (settings.syncScroll && viewMode === "split") {
@@ -463,6 +490,7 @@ export const App: React.FC = () => {
               fontSize={settings.fontSize}
               onScroll={handleEditorScroll}
               onSelectionChange={setSelection}
+              onImagePaste={handleImagePaste}
             />
 
             {/* Floating Add Comment tooltip */}
