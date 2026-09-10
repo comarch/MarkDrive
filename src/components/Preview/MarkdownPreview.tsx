@@ -5,6 +5,7 @@ import React, {
   forwardRef,
   useMemo,
 } from "react";
+import { createRoot } from "react-dom/client";
 import mermaid from "mermaid";
 import { parseMarkdown } from "./markdownParser";
 import { DriveComment } from "../../types/drive";
@@ -123,6 +124,98 @@ export const MarkdownPreview = forwardRef<
           // ignore mermaid parse errors on partial typing
         }
       }
+    }, [renderedHtml, isDark]);
+
+    // Render Graphviz sources to inline SVG, loading the engine lazily.
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+      const sources = Array.from(
+        container.querySelectorAll<HTMLElement>(".graphviz-src"),
+      );
+      if (sources.length === 0) return;
+
+      let cancelled = false;
+      void (async () => {
+        try {
+          const { instance } = await import("@viz-js/viz");
+          const viz = await instance();
+          if (cancelled) return;
+          for (const source of sources) {
+            const code = source.textContent ?? "";
+            try {
+              // The default output format is dot; ask for SVG explicitly.
+              const svg = viz.render(code, { format: "svg" });
+              source.classList.remove("graphviz-src");
+              source.classList.add("graphviz-rendered");
+              source.innerHTML = svg.output ?? "";
+            } catch {
+              source.classList.add("graphviz-error");
+              source.dataset.error = "Graphviz could not render this diagram.";
+            }
+          }
+        } catch {
+          // The engine itself failed to load; sources stay as code.
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [renderedHtml]);
+
+    // Embed Excalidraw scenes as view-only islands, lazily loaded.
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+      const embeds = Array.from(
+        container.querySelectorAll<HTMLElement>(".excalidraw-embed"),
+      );
+      if (embeds.length === 0) return;
+
+      let cancelled = false;
+      const roots: Array<{
+        root: ReturnType<typeof createRoot>;
+        node: HTMLElement;
+      }> = [];
+
+      void (async () => {
+        try {
+          const { Excalidraw, React } = await import("./excalidrawIsland");
+          if (cancelled) return;
+          for (const embed of embeds) {
+            let scene: unknown;
+            try {
+              scene = JSON.parse(embed.textContent ?? "");
+            } catch {
+              embed.classList.add("graphviz-error");
+              embed.dataset.error = "This Excalidraw scene is not valid JSON.";
+              continue;
+            }
+            const host = document.createElement("div");
+            host.className = "excalidraw-island";
+            embed.replaceWith(host);
+            const root = createRoot(host);
+            roots.push({ root, node: host });
+            root.render(
+              React.createElement(Excalidraw, {
+                initialData: scene as Record<string, unknown>,
+                viewModeEnabled: true,
+                theme: isDark ? "dark" : "light",
+              }),
+            );
+          }
+        } catch {
+          // The island bundle failed to load; embeds stay as code.
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+        for (const { root } of roots) {
+          root.unmount();
+        }
+      };
     }, [renderedHtml, isDark]);
 
     // Handle scroll event

@@ -170,11 +170,23 @@ export const md: MarkdownIt = new MarkdownIt({
   linkify: true,
   typographer: true,
   highlight: function (str: string, lang: string) {
-    if (lang && lang.toLowerCase() === "mermaid") {
+    const normalized = lang.toLowerCase();
+
+    if (normalized === "mermaid") {
       return `<div class="mermaid">${md.utils.escapeHtml(str)}</div>`;
     }
 
-    if (lang && ["math", "latex", "katex"].includes(lang.toLowerCase())) {
+    // Graphviz sources render to SVG in the preview after parsing.
+    if (normalized === "dot" || normalized === "graphviz") {
+      return `<div class="graphviz-src">${md.utils.escapeHtml(str)}</div>`;
+    }
+
+    // Excalidraw scenes embed as view-only islands in the preview.
+    if (normalized === "excalidraw") {
+      return `<div class="excalidraw-embed">${md.utils.escapeHtml(str)}</div>`;
+    }
+
+    if (normalized && ["math", "latex", "katex"].includes(normalized)) {
       try {
         return `<div class="katex-display">${katex.renderToString(str, {
           displayMode: true,
@@ -212,16 +224,25 @@ md.use(anchorPlugin, {
 
 /**
  * Pre-processes text for LaTeX equations before markdown parsing.
- * Supports $$display$$ and $inline$.
+ * Supports $$display$$ and $inline$. Display equations get a running
+ * number; frontmatter math-macros expand custom commands.
  */
-function renderMathFormulas(text: string): string {
+function renderMathFormulas(
+  text: string,
+  macros: Record<string, string>,
+): string {
+  let equationNumber = 0;
+
   // Replace display math $$...$$
   let processed = text.replace(/\$\$([\s\S]*?)\$\$/g, (_match, math) => {
     try {
-      return `<div class="katex-display">${katex.renderToString(math.trim(), {
+      const rendered = katex.renderToString(math.trim(), {
         displayMode: true,
         throwOnError: false,
-      })}</div>`;
+        macros,
+      });
+      equationNumber += 1;
+      return `<div class="katex-display"><span class="equation-number">(${equationNumber})</span>${rendered}</div>`;
     } catch {
       return `$$${math}$$`;
     }
@@ -235,6 +256,7 @@ function renderMathFormulas(text: string): string {
         const rendered = katex.renderToString(math.trim(), {
           displayMode: false,
           throwOnError: false,
+          macros,
         });
         return `${prefix}${rendered}`;
       } catch {
@@ -328,9 +350,21 @@ export function parseMarkdown(
   comments: DriveComment[] = [],
 ): string {
   // Frontmatter is metadata: hidden from the preview, kept in the source.
-  const { body } = parseFrontmatter(markdownText);
+  const { body, fields } = parseFrontmatter(markdownText);
+  // KaTeX macros from frontmatter, keyed with or without the backslash.
+  const rawMacros = fields["math-macros"];
+  const macros: Record<string, string> = {};
+  if (rawMacros && typeof rawMacros === "object" && !Array.isArray(rawMacros)) {
+    for (const [key, value] of Object.entries(
+      rawMacros as Record<string, unknown>,
+    )) {
+      if (typeof value !== "string") continue;
+      const name = key.startsWith("\\") ? key : `\\${key}`;
+      macros[name] = value;
+    }
+  }
   const withWikilinks = renderWikiLinks(body);
-  const withMath = renderMathFormulas(withWikilinks);
+  const withMath = renderMathFormulas(withWikilinks, macros);
   const rawHtml = md.render(withMath);
   // Task checkboxes map back to source lines, so add the hidden block height.
   const taskLineOffset = frontmatterLineOffset(markdownText);

@@ -40,8 +40,16 @@ Runtime may connect to:
 - `www.googleapis.com` for Drive and user profile APIs;
 - image hosts referenced by Markdown authors.
 
-Exported HTML may connect to `cdn.jsdelivr.net` and `cdnjs.cloudflare.com` for
-KaTeX and code highlighting styles.
+Exported HTML and exported static sites are self-contained: KaTeX and
+highlight styles, including fonts, are inlined as data, so published files
+make no outbound requests.
+
+Diagrams and math render locally in the browser: Mermaid and Graphviz
+(`dot` fenced blocks) run WebAssembly engines, and Excalidraw scenes embed
+as view-only islands. None of them call a rendering service. PlantUML has
+no browser renderer and stays reserved for the optional companion service
+rather than a third-party endpoint; documents show the fenced source until
+then.
 
 Self-hosters should review these endpoints, Content Security Policy, proxy
 rules, and privacy requirements before production deployment.
