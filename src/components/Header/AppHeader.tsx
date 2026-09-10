@@ -29,6 +29,7 @@ import {
   reviewStatusLabel,
   reviewStatusClasses,
 } from "../../utils/reviewStatus";
+import { t } from "../../i18n";
 
 export type EditingMode = "edit" | "suggest";
 
@@ -219,25 +220,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             {saveStatus === "saving" && (
               <span className="flex items-center gap-1 text-brand-600 dark:text-brand-400">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                <span className="hidden sm:inline">Saving to Drive...</span>
+                <span className="hidden sm:inline">{t("status.saving")}</span>
               </span>
             )}
             {saveStatus === "saved" && (
               <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                 <Check className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Saved</span>
+                <span className="hidden sm:inline">{t("status.saved")}</span>
               </span>
             )}
             {saveStatus === "unsaved" && (
               <span className="flex items-center gap-1 text-amber-500">
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span className="hidden sm:inline">Unsaved</span>
+                <span className="hidden sm:inline">{t("status.unsaved")}</span>
               </span>
             )}
             {saveStatus === "error" && (
               <span className="flex items-center gap-1 text-rose-500">
                 <AlertCircle className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Save failed</span>
+                <span className="hidden sm:inline">{t("status.error")}</span>
               </span>
             )}
           </div>
@@ -249,11 +250,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <div
           className="flex items-center rounded-full bg-slate-100 dark:bg-slate-800 p-0.5 gap-0.5"
           role="radiogroup"
-          aria-label="Editing mode"
+          aria-label={t("mode.editTitle")}
         >
           <button
             onClick={() => onChangeEditingMode("edit")}
-            title="Edit the document directly"
+            title={t("mode.editTitle")}
             aria-pressed={editingMode === "edit"}
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition ${
               editingMode === "edit"
@@ -262,11 +263,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             }`}
           >
             <PenLine className="w-3.5 h-3.5" />
-            <span>Edit</span>
+            <span>{t("mode.edit")}</span>
           </button>
           <button
             onClick={() => onChangeEditingMode("suggest")}
-            title="Record changes as suggestions for review"
+            title={t("mode.suggestTitle")}
             aria-pressed={editingMode === "suggest"}
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition ${
               editingMode === "suggest"
@@ -275,7 +276,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             }`}
           >
             <FilePen className="w-3.5 h-3.5" />
-            <span>Suggest</span>
+            <span>{t("mode.suggest")}</span>
           </button>
         </div>
 
@@ -283,11 +284,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <div
           className="flex items-center rounded-full bg-slate-100 dark:bg-slate-800 p-0.5 gap-0.5"
           role="toolbar"
-          aria-label="Zoom"
+          aria-label={t("zoom.group")}
         >
           <button
             onClick={onZoomOut}
-            title="Zoom out"
+            title={t("zoom.out")}
             aria-label="Zoom out"
             disabled={zoom <= 12}
             className="px-2 py-1 rounded-full text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-40 transition"
@@ -299,7 +300,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </span>
           <button
             onClick={onZoomIn}
-            title="Zoom in"
+            title={t("zoom.in")}
             aria-label="Zoom in"
             disabled={zoom >= 22}
             className="px-2 py-1 rounded-full text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-40 transition"
@@ -314,7 +315,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* New document button */}
         <button
           onClick={onNewDocument}
-          title="New document (Create in Drive)"
+          title={t("header.newDocument")}
           className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
         >
           <FilePlus className="w-4 h-4" />
@@ -324,7 +325,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {onOpenFileBrowser && (
           <button
             onClick={onOpenFileBrowser}
-            title="Open Markdown files"
+            title={t("header.openFiles")}
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
           >
             <FolderOpen className="w-4 h-4" />
@@ -334,18 +335,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Save button */}
         <button
           onClick={onSave}
-          title="Save to Google Drive (Ctrl + S)"
+          title={t("header.save")}
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium transition shadow-xs"
         >
           <Save className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Save</span>
+          <span className="hidden sm:inline">{t("header.saveShort")}</span>
         </button>
 
         {/* Presentation mode button */}
         {onPresent && (
           <button
             onClick={onPresent}
-            title="Present as slides"
+            title={t("header.present")}
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
           >
             <Presentation className="w-4 h-4" />
@@ -355,7 +356,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Export button */}
         <button
           onClick={onOpenExportModal}
-          title="Export (Markdown, HTML, PDF)"
+          title={t("header.export")}
           className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
         >
           <Download className="w-4 h-4" />
@@ -366,7 +367,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Outline / TOC button */}
         <button
           onClick={onToggleOutline}
-          title="Toggle document outline"
+          title={t("header.outline")}
           className={`p-1.5 rounded-lg transition ${
             isOutlineOpen
               ? "bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400"
@@ -380,7 +381,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {onOpenTemplates && (
           <button
             onClick={onOpenTemplates}
-            title="Templates and snippets"
+            title={t("header.templates")}
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
           >
             <LayoutTemplate className="w-4 h-4" />
@@ -391,7 +392,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {onOpenGraph && (
           <button
             onClick={onOpenGraph}
-            title="Folder link graph"
+            title={t("header.graph")}
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
           >
             <Network className="w-4 h-4" />
@@ -402,7 +403,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {onOpenReviewQueue && (
           <button
             onClick={onOpenReviewQueue}
-            title="Documents awaiting review"
+            title={t("header.reviewQueue")}
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
           >
             <ListChecks className="w-4 h-4" />
@@ -413,7 +414,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {onOpenHistory && (
           <button
             onClick={onOpenHistory}
-            title="Version history"
+            title={t("header.history")}
             className={`p-1.5 rounded-lg transition ${
               isHistoryOpen
                 ? "bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400"
@@ -428,7 +429,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {onOpenProperties && (
           <button
             onClick={onOpenProperties}
-            title="Document properties"
+            title={t("header.properties")}
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
           >
             <FileCog className="w-4 h-4" />
@@ -438,7 +439,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Google Drive Comments Drawer Button */}
         <button
           onClick={onToggleComments}
-          title="Google Drive comments"
+          title={t("header.comments")}
           className={`relative p-1.5 rounded-lg transition ${
             isCommentsOpen
               ? "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400"
@@ -465,7 +466,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Settings button */}
         <button
           onClick={onOpenSettings}
-          title="Settings & Google OAuth Config"
+          title={t("header.settings")}
           className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
         >
           <Settings className="w-4 h-4" />
@@ -493,11 +494,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           ) : (
             <button
               onClick={onSignIn}
-              title="Connect Google Drive"
+              title={t("header.signIn")}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 transition"
             >
               <LogIn className="w-3.5 h-3.5 text-brand-600" />
-              <span className="hidden sm:inline">Sign In</span>
+              <span className="hidden sm:inline">{t("header.signIn")}</span>
             </button>
           )}
 

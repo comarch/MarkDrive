@@ -50,6 +50,8 @@ import { SAMPLE_MARKDOWN } from "./utils/sampleDocument";
 import { toggleTaskLine } from "./utils/tasks";
 import { parseFrontmatter, updateFrontmatterField } from "./utils/frontmatter";
 import { REVIEW_STATUS_FIELD } from "./utils/reviewStatus";
+import { setLanguage, t } from "./i18n";
+import { Eye, PenLine } from "lucide-react";
 import { applyTableAction, type TableAction } from "./utils/tableUtils";
 import {
   generateTableOfContents,
@@ -85,6 +87,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   fontSize: 14,
   syncScroll: true,
   templatesFolderId: "",
+  language: "en",
 };
 
 const LOCAL_STORAGE_CONTENT_KEY = "gdrive_md_last_content";
@@ -104,6 +107,7 @@ const toPersistableSettings = (
   fontSize: value.fontSize,
   syncScroll: value.syncScroll,
   templatesFolderId: value.templatesFolderId,
+  language: value.language,
 });
 
 export const App: React.FC = () => {
@@ -228,6 +232,36 @@ export const App: React.FC = () => {
     }));
   }, []);
 
+  // Interface language applies to the whole shell. The catalogue is a
+  // module singleton, so the mirror state forces the re-render that picks
+  // the new strings up; the root data attribute makes it observable.
+  const [uiLanguage, setUiLanguage] = useState(settings.language);
+  useEffect(() => {
+    setLanguage(settings.language);
+    setUiLanguage(settings.language);
+  }, [settings.language]);
+
+  // Mobile: single pane with a floating switch, because a 50/50 split
+  // is unreadable below tablet widths.
+  const [isMobile, setIsMobile] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches,
+  );
+  const [mobilePane, setMobilePane] = useState<"editor" | "preview">("editor");
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 767px)");
+    const onChange = (event: MediaQueryListEvent) => setIsMobile(event.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
+  const showEditorPane =
+    (viewMode === "split" || viewMode === "editor") &&
+    (!isMobile || mobilePane === "editor");
+  const showPreviewPane =
+    (viewMode === "split" || viewMode === "preview") &&
+    (!isMobile || mobilePane === "preview");
   // Suggestion mode: edits are recorded as a patch, not written to Drive.
   const [editingMode, setEditingMode] = useState<EditingMode>("edit");
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
@@ -1116,7 +1150,10 @@ export const App: React.FC = () => {
   const openCommentsCount = comments.filter((c) => !c.resolved).length;
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
+    <div
+      data-ui-language={uiLanguage}
+      className="flex flex-col h-screen w-screen overflow-hidden bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans"
+    >
       {/* App Header */}
       <AppHeader
         documentTitle={documentTitle}
@@ -1159,13 +1196,15 @@ export const App: React.FC = () => {
           <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
             <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
             <span className="font-medium">Suggesting.</span>
-            <span className="hidden sm:inline">
-              Edits are recorded as suggestions for review, not written to
-              Drive.
-            </span>
+            <span className="hidden sm:inline">{t("suggest.banner")}</span>
             <span>
-              {pendingSuggestionHunks.length} pending change
-              {pendingSuggestionHunks.length === 1 ? "" : "s"}
+              {pendingSuggestionHunks.length === 1
+                ? t("suggest.pending.one", {
+                    count: pendingSuggestionHunks.length,
+                  })
+                : t("suggest.pending.many", {
+                    count: pendingSuggestionHunks.length,
+                  })}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -1173,14 +1212,14 @@ export const App: React.FC = () => {
               onClick={handleDiscardSuggestions}
               className="px-2.5 py-1 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium transition"
             >
-              Discard
+              {t("suggest.discard")}
             </button>
             <button
               onClick={() => void handleSubmitSuggestions()}
               disabled={pendingSuggestionHunks.length === 0}
               className="px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-600 text-white font-medium disabled:opacity-50 transition"
             >
-              Submit suggestions
+              {t("suggest.submit")}
             </button>
           </div>
         </div>
@@ -1221,10 +1260,10 @@ export const App: React.FC = () => {
         />
 
         {/* Code Editor Pane */}
-        {(viewMode === "split" || viewMode === "editor") && (
+        {showEditorPane && (
           <div
             className={`editor-pane h-full overflow-hidden relative ${
-              viewMode === "split" ? "w-1/2" : "w-full"
+              viewMode === "split" && !isMobile ? "w-1/2" : "w-full"
             }`}
           >
             <CodeMirrorEditor
@@ -1256,10 +1295,10 @@ export const App: React.FC = () => {
         )}
 
         {/* Markdown Live Preview Pane */}
-        {(viewMode === "split" || viewMode === "preview") && (
+        {showPreviewPane && (
           <div
             className={`preview-container preview-canvas h-full overflow-hidden ${
-              viewMode === "split" ? "w-1/2" : "w-full"
+              viewMode === "split" && !isMobile ? "w-1/2" : "w-full"
             }`}
           >
             <MarkdownPreview
@@ -1277,6 +1316,34 @@ export const App: React.FC = () => {
               onOpenDocLink={handleOpenDocLink}
             />
           </div>
+        )}
+
+        {/* Mobile single-pane switch */}
+        {isMobile && viewMode === "split" && (
+          <button
+            onClick={() =>
+              setMobilePane((pane) =>
+                pane === "editor" ? "preview" : "editor",
+              )
+            }
+            title={
+              mobilePane === "editor"
+                ? t("mobile.showPreview")
+                : t("mobile.showEditor")
+            }
+            aria-label={
+              mobilePane === "editor"
+                ? t("mobile.showPreview")
+                : t("mobile.showEditor")
+            }
+            className="fixed bottom-4 right-4 z-40 p-3 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-lg no-print"
+          >
+            {mobilePane === "editor" ? (
+              <Eye className="w-5 h-5" />
+            ) : (
+              <PenLine className="w-5 h-5" />
+            )}
+          </button>
         )}
 
         {/* Google Drive Comments Sidebar Drawer */}
