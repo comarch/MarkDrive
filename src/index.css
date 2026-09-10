@@ -38,6 +38,43 @@ a.doc-link {
   text-decoration: underline dotted;
 }
 
+/* GitHub-style callout blocks */
+.callout {
+  border-left: 4px solid #94a3b8;
+  border-radius: 4px;
+  padding: 8px 14px;
+  margin: 12px 0;
+  background: rgba(148, 163, 175, 0.08);
+}
+.callout .callout-title {
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+.callout-note {
+  border-color: #3b82f6;
+}
+.callout-tip {
+  border-color: #10b981;
+}
+.callout-important {
+  border-color: #8b5cf6;
+}
+.callout-warning {
+  border-color: #f59e0b;
+}
+.callout-caution {
+  border-color: #ef4444;
+}
+
+/* Footnotes rendered by markdown-it-footnote */
+.footnotes {
+  font-size: 0.85em;
+  color: #64748b;
+}
+.footnotes hr {
+  margin: 16px 0;
+}
+
 .markdown-body h1 {
   @apply text-3xl font-bold pb-2 mb-4 mt-6 border-b border-slate-200 dark:border-slate-700;
 }
