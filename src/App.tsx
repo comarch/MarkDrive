@@ -147,6 +147,8 @@ export const App: React.FC = () => {
   const lastSyncedContentRef = useRef<string>(content);
   // Suppresses auto-save while the conflict dialog is open.
   const isConflictOpenRef = useRef(false);
+  // Resolved cross-document links, cached per session folder and file name.
+  const docLinkCacheRef = useRef(new Map<string, string | null>());
 
   // Sync theme with DOM
   useEffect(() => {
@@ -444,6 +446,40 @@ export const App: React.FC = () => {
       }
     },
     [loadComments, saveStatus],
+  );
+
+  // Resolve a relative Markdown link against the document's Drive folder
+  const handleOpenDocLink = useCallback(
+    async (target: string) => {
+      const name = target.split("#")[0] ?? target;
+      if (!name) return;
+      const folderId = fileMetadata?.parents?.[0];
+      if (!folderId) {
+        window.alert(
+          "Cross-document links need a file opened from a Drive folder.",
+        );
+        return;
+      }
+      const cacheKey = `${folderId}/${name}`;
+      let fileId: string | null | undefined =
+        docLinkCacheRef.current.get(cacheKey);
+      if (fileId === undefined) {
+        try {
+          fileId = await driveService.findFileInFolder(name, folderId);
+          docLinkCacheRef.current.set(cacheKey, fileId);
+        } catch (err) {
+          console.error("Failed to resolve document link:", err);
+          window.alert("Could not resolve the linked file. Check the folder.");
+          return;
+        }
+      }
+      if (!fileId) {
+        window.alert(`No file named "${name}" exists in the document folder.`);
+        return;
+      }
+      await handleOpenFile(fileId);
+    },
+    [fileMetadata, handleOpenFile],
   );
 
   // Handle document content change & auto-save
@@ -756,6 +792,7 @@ export const App: React.FC = () => {
                 setSelectedCommentId(id);
               }}
               onToggleTask={handleToggleTask}
+              onOpenDocLink={handleOpenDocLink}
             />
           </div>
         )}

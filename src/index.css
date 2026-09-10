@@ -33,6 +33,11 @@
   word-wrap: break-word;
 }
 
+/* Cross-document links resolve inside the app instead of navigating */
+a.doc-link {
+  text-decoration: underline dotted;
+}
+
 .markdown-body h1 {
   @apply text-3xl font-bold pb-2 mb-4 mt-6 border-b border-slate-200 dark:border-slate-700;
 }

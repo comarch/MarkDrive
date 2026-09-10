@@ -321,6 +321,46 @@ export class GoogleDriveService {
   }
 
   /**
+   * Finds a file by exact name inside a Drive folder.
+   *
+   * Returns null when nothing matches, so callers can show a clear reason.
+   */
+  public async findFileInFolder(
+    name: string,
+    folderId: string,
+  ): Promise<string | null> {
+    const token = authService.getAccessToken();
+
+    if (!token || token.startsWith("mock_google_token_")) {
+      const store = getMockStorage();
+      const entry = Object.values(store).find(
+        (candidate) =>
+          candidate.metadata.parents?.includes(folderId) &&
+          candidate.metadata.name.toLowerCase() === name.toLowerCase(),
+      );
+      return entry?.metadata.id ?? null;
+    }
+
+    const escapedName = name.replace(/'/g, "\\'");
+    const query = encodeURIComponent(
+      `name = '${escapedName}' and '${folderId}' in parents`,
+    );
+    const res = await fetch(
+      `${DRIVE_API_BASE}/files?q=${query}&fields=files(id,name)&pageSize=5`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(`Failed to search the folder: ${res.statusText}`);
+    }
+
+    const data = (await res.json()) as { files?: { id: string }[] };
+    return data.files?.[0]?.id ?? null;
+  }
+
+  /**
    * Fetches the current head revision ID for a file.
    */
   public async fetchHeadRevisionId(fileId: string): Promise<string | null> {

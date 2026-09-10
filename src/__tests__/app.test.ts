@@ -24,6 +24,17 @@ describe("markdownParser", () => {
     expect(html).toContain("checked");
   });
 
+  it("marks relative links as cross-document links", () => {
+    const md =
+      "[Notes](notes.md), [External](https://example.com), [Local](#section), [Mail](mailto:a@b.c)";
+    const html = parseMarkdown(md);
+
+    expect(html).toContain('data-doc-link="notes.md"');
+    expect(html).not.toContain('data-doc-link="https://example.com');
+    expect(html).not.toContain('data-doc-link="#section"');
+    expect(html).not.toContain('data-doc-link="mailto:a@b.c"');
+  });
+
   it("renders tables", () => {
     const md = "| Col 1 | Col 2 |\n| --- | --- |\n| Val 1 | Val 2 |";
     const html = parseMarkdown(md);
