@@ -22,6 +22,7 @@ interface MarkdownPreviewProps {
   isDark: boolean;
   onScroll?: (percentage: number) => void;
   onSelectComment?: (commentId: string) => void;
+  onToggleTask?: (lineNumber: number, checked: boolean) => void;
 }
 
 // Mermaid configuration
@@ -34,114 +35,131 @@ mermaid.initialize({
 export const MarkdownPreview = forwardRef<
   MarkdownPreviewHandle,
   MarkdownPreviewProps
->(({ content, comments = [], isDark, onScroll, onSelectComment }, ref) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isProgrammaticScrollRef = useRef(false);
+>(
+  (
+    { content, comments = [], isDark, onScroll, onSelectComment, onToggleTask },
+    ref,
+  ) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isProgrammaticScrollRef = useRef(false);
 
-  // Render parsed HTML
-  const renderedHtml = useMemo(() => {
-    return parseMarkdown(content, comments);
-  }, [content, comments]);
+    // Render parsed HTML
+    const renderedHtml = useMemo(() => {
+      return parseMarkdown(content, comments);
+    }, [content, comments]);
 
-  // Expose scroll methods
-  useImperativeHandle(ref, () => ({
-    getScrollPercentage() {
-      const container = containerRef.current;
-      if (!container) return 0;
-      const maxScroll = container.scrollHeight - container.clientHeight;
-      return maxScroll > 0 ? container.scrollTop / maxScroll : 0;
-    },
+    // Expose scroll methods
+    useImperativeHandle(ref, () => ({
+      getScrollPercentage() {
+        const container = containerRef.current;
+        if (!container) return 0;
+        const maxScroll = container.scrollHeight - container.clientHeight;
+        return maxScroll > 0 ? container.scrollTop / maxScroll : 0;
+      },
 
-    scrollToPercentage(percentage: number) {
-      const container = containerRef.current;
-      if (!container) return;
-      isProgrammaticScrollRef.current = true;
-      const maxScroll = container.scrollHeight - container.clientHeight;
-      container.scrollTop = maxScroll * Math.min(1, Math.max(0, percentage));
-      setTimeout(() => {
-        isProgrammaticScrollRef.current = false;
-      }, 50);
-    },
+      scrollToPercentage(percentage: number) {
+        const container = containerRef.current;
+        if (!container) return;
+        isProgrammaticScrollRef.current = true;
+        const maxScroll = container.scrollHeight - container.clientHeight;
+        container.scrollTop = maxScroll * Math.min(1, Math.max(0, percentage));
+        setTimeout(() => {
+          isProgrammaticScrollRef.current = false;
+        }, 50);
+      },
 
-    scrollToHeading(id: string) {
-      const container = containerRef.current;
-      if (!container) return;
-      const el = container.querySelector(`[id="${id}"]`);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToHeading(id: string) {
+        const container = containerRef.current;
+        if (!container) return;
+        const el = container.querySelector(`[id="${id}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      },
+    }));
+
+    // Trigger mermaid rendering when HTML updates
+    useEffect(() => {
+      if (!containerRef.current) return;
+
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: isDark ? "dark" : "default",
+        securityLevel: "strict",
+      });
+
+      const mermaidDivs = containerRef.current.querySelectorAll(".mermaid");
+      if (mermaidDivs.length > 0) {
+        try {
+          mermaid.run({
+            nodes: Array.from(mermaidDivs) as HTMLElement[],
+          });
+        } catch {
+          // ignore mermaid parse errors on partial typing
+        }
       }
-    },
-  }));
+    }, [renderedHtml, isDark]);
 
-  // Trigger mermaid rendering when HTML updates
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: isDark ? "dark" : "default",
-      securityLevel: "strict",
-    });
-
-    const mermaidDivs = containerRef.current.querySelectorAll(".mermaid");
-    if (mermaidDivs.length > 0) {
-      try {
-        mermaid.run({
-          nodes: Array.from(mermaidDivs) as HTMLElement[],
-        });
-      } catch {
-        // ignore mermaid parse errors on partial typing
+    // Handle scroll event
+    const handleScroll = () => {
+      if (isProgrammaticScrollRef.current || !containerRef.current || !onScroll)
+        return;
+      const el = containerRef.current;
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      if (maxScroll > 0) {
+        onScroll(el.scrollTop / maxScroll);
       }
-    }
-  }, [renderedHtml, isDark]);
+    };
 
-  // Handle scroll event
-  const handleScroll = () => {
-    if (isProgrammaticScrollRef.current || !containerRef.current || !onScroll)
-      return;
-    const el = containerRef.current;
-    const maxScroll = el.scrollHeight - el.clientHeight;
-    if (maxScroll > 0) {
-      onScroll(el.scrollTop / maxScroll);
-    }
-  };
+    // Handle clicks on comment highlights and external links
+    const handleClick = (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
 
-  // Handle clicks on comment highlights and external links
-  const handleClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-
-    // Check if user clicked a comment highlight mark
-    const commentMark = target.closest(".comment-highlight");
-    if (commentMark) {
-      const commentId = commentMark.getAttribute("data-comment-id");
-      if (commentId && onSelectComment) {
-        onSelectComment(commentId);
+      const checkbox = target.closest("input.task-list-item-checkbox");
+      if (checkbox) {
+        e.preventDefault();
+        const lineAttr = checkbox.getAttribute("data-task-line");
+        if (!lineAttr || !onToggleTask) return;
+        const lineNumber = Number.parseInt(lineAttr, 10);
+        if (!Number.isFinite(lineNumber)) return;
+        const currentChecked = checkbox.hasAttribute("checked");
+        onToggleTask(lineNumber, !currentChecked);
         return;
       }
-    }
 
-    // Open links in new tab
-    const anchor = target.closest("a");
-    if (anchor && anchor.href && !anchor.href.startsWith("#")) {
-      anchor.target = "_blank";
-      anchor.rel = "noopener noreferrer";
-    }
-  };
+      // Check if user clicked a comment highlight mark
+      const commentMark = target.closest(".comment-highlight");
+      if (commentMark) {
+        const commentId = commentMark.getAttribute("data-comment-id");
+        if (commentId && onSelectComment) {
+          onSelectComment(commentId);
+          return;
+        }
+      }
 
-  return (
-    <div
-      ref={containerRef}
-      onScroll={handleScroll}
-      onClick={handleClick}
-      className="preview-pane w-full h-full overflow-y-auto px-8 py-6 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-    >
+      // Open links in new tab
+      const anchor = target.closest("a");
+      if (anchor && anchor.href && !anchor.href.startsWith("#")) {
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+      }
+    };
+
+    return (
       <div
-        className="markdown-body max-w-4xl mx-auto"
-        dangerouslySetInnerHTML={{ __html: renderedHtml }}
-      />
-    </div>
-  );
-});
+        ref={containerRef}
+        onScroll={handleScroll}
+        onClick={handleClick}
+        className="preview-pane w-full h-full overflow-y-auto px-8 py-6 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+      >
+        <div
+          className="markdown-body max-w-4xl mx-auto"
+          dangerouslySetInnerHTML={{ __html: renderedHtml }}
+        />
+      </div>
+    );
+  },
+);
 
 MarkdownPreview.displayName = "MarkdownPreview";
 
