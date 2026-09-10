@@ -1,4 +1,4 @@
-import { DriveFileMetadata } from "../types/drive";
+import { DriveFileMetadata, DriveRevision } from "../types/drive";
 import { authService } from "./googleAuth";
 
 const DRIVE_API_BASE = "https://www.googleapis.com/drive/v3";
@@ -7,8 +7,24 @@ const UPLOAD_API_BASE = "https://www.googleapis.com/upload/drive/v3";
 // Local mock storage for offline / testing without Google credentials
 const MOCK_FILES_KEY = "gdrive_mock_files";
 
+// Drive ids are opaque base64url tokens. Validate them before interpolating
+// into request URLs so a malformed id from the drive state cannot alter it.
+const DRIVE_ID_PATTERN = /^[A-Za-z0-9_-]{1,256}$/;
+
+function assertValidDriveId(id: string, label: string): void {
+  if (!DRIVE_ID_PATTERN.test(id)) {
+    throw new Error(`Invalid ${label}`);
+  }
+}
+
 interface MockFileEntry {
   metadata: DriveFileMetadata;
+  content: string;
+  revisions?: MockRevisionEntry[];
+}
+
+interface MockRevisionEntry {
+  revision: DriveRevision;
   content: string;
 }
 
@@ -105,11 +121,28 @@ export class GoogleDriveService {
           capabilities: { canEdit: true, canComment: true },
         },
         content: "",
+        revisions: [],
       };
 
+      const revisions = existing.revisions ?? [];
+      const modifiedTime = new Date().toISOString();
+      const revision: MockRevisionEntry = {
+        revision: {
+          id: `mock_rev_${revisions.length + 1}`,
+          modifiedTime,
+          lastModifyingUser: { displayName: "Demo User" },
+        },
+        content,
+      };
+      revisions.push(revision);
+      if (revisions.length > 50) {
+        revisions.shift();
+      }
+      existing.revisions = revisions;
       existing.content = content;
       if (name) existing.metadata.name = name;
-      existing.metadata.modifiedTime = new Date().toISOString();
+      existing.metadata.modifiedTime = modifiedTime;
+      existing.metadata.headRevisionId = revision.revision.id;
       store[fileId] = existing;
       saveMockStorage(store);
       return existing.metadata;
@@ -175,9 +208,23 @@ export class GoogleDriveService {
         modifiedTime: new Date().toISOString(),
         parents: folderId ? [folderId] : undefined,
         capabilities: { canEdit: true, canComment: true },
+        headRevisionId: "mock_rev_1",
       };
       const store = getMockStorage();
-      store[id] = { metadata, content };
+      store[id] = {
+        metadata,
+        content,
+        revisions: [
+          {
+            revision: {
+              id: "mock_rev_1",
+              modifiedTime: metadata.modifiedTime,
+              lastModifyingUser: { displayName: "Demo User" },
+            },
+            content,
+          },
+        ],
+      };
       saveMockStorage(store);
       return metadata;
     }
@@ -250,6 +297,99 @@ export class GoogleDriveService {
 
     const data = (await res.json()) as { headRevisionId?: string };
     return data.headRevisionId ?? null;
+  }
+
+  /**
+   * Lists file revisions without their content, newest first.
+   */
+  public async listRevisions(fileId: string): Promise<DriveRevision[]> {
+    assertValidDriveId(fileId, "file id");
+    const token = authService.getAccessToken();
+
+    if (!token || token.startsWith("mock_google_token_")) {
+      const entry = getMockStorage()[fileId];
+      return (
+        entry?.revisions
+          ?.slice()
+          .reverse()
+          .map(({ revision }) => revision) ?? []
+      );
+    }
+
+    const revisions: DriveRevision[] = [];
+    let pageToken: string | undefined;
+    do {
+      // Files commonly carry more than 100 revisions, so walk every page.
+      const query =
+        "fields=nextPageToken,revisions(id,modifiedTime,lastModifyingUser(displayName,emailAddress))&pageSize=100" +
+        (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : "");
+      const res = await fetch(
+        `${DRIVE_API_BASE}/files/${fileId}/revisions?${query}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error(`Failed to list file revisions: ${res.statusText}`);
+      }
+
+      const data = (await res.json()) as {
+        revisions?: DriveRevision[];
+        nextPageToken?: string;
+      };
+      revisions.push(...(data.revisions ?? []));
+      pageToken = data.nextPageToken;
+    } while (pageToken);
+
+    // Drive returns revisions oldest-first; the app expects newest-first.
+    return revisions.reverse();
+  }
+
+  /**
+   * Fetches content for one file revision.
+   */
+  public async getRevisionContent(
+    fileId: string,
+    revisionId: string,
+  ): Promise<string> {
+    assertValidDriveId(fileId, "file id");
+    assertValidDriveId(revisionId, "revision id");
+    const token = authService.getAccessToken();
+
+    if (!token || token.startsWith("mock_google_token_")) {
+      const revision = getMockStorage()[fileId]?.revisions?.find(
+        ({ revision: storedRevision }) => storedRevision.id === revisionId,
+      );
+      if (!revision) {
+        throw new Error("Revision not found");
+      }
+      return revision.content;
+    }
+
+    const res = await fetch(
+      `${DRIVE_API_BASE}/files/${fileId}/revisions/${revisionId}?alt=media`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(`Failed to load revision content: ${res.statusText}`);
+    }
+
+    return await res.text();
+  }
+
+  /**
+   * Restores a revision by saving its content as a new revision.
+   */
+  public async restoreRevision(
+    fileId: string,
+    revisionId: string,
+  ): Promise<DriveFileMetadata> {
+    const content = await this.getRevisionContent(fileId, revisionId);
+    return await this.updateFile(fileId, content);
   }
 
   /**

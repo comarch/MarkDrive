@@ -28,6 +28,17 @@ export interface DriveFileMetadata {
   };
 }
 
+export interface DriveRevision {
+  id: string;
+  modifiedTime?: string;
+  lastModifyingUser?: {
+    displayName?: string;
+    emailAddress?: string;
+    photoLink?: string;
+  };
+  originalFilename?: string;
+}
+
 export interface DriveReply {
   id: string;
   kind: string;
