@@ -205,8 +205,11 @@ end-to-end tests run separately through `npm run test:e2e`.
 ## Project status
 
 MarkQuire is pre-1.0. The core authoring, preview, Drive file, comment, and
-export workflows are implemented. Production deployment still requires
-organization-specific Google Cloud and Workspace configuration.
+export workflows are implemented, together with save conflict detection, Drive
+version history, image paste and upload, search and replace, and interactive
+task checkboxes. Playwright end-to-end tests cover the demo-mode workflows.
+Production deployment still requires organization-specific Google Cloud and
+Workspace configuration.
 
 Contributions are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) and the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
