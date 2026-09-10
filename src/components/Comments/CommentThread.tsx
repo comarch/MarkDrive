@@ -7,6 +7,8 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { DriveComment } from "../../types/drive";
+import { parseSuggestions } from "../../utils/patch";
+import { SuggestionCard } from "./SuggestionCard";
 
 interface CommentThreadProps {
   comment: DriveComment;
@@ -14,6 +16,12 @@ interface CommentThreadProps {
   onResolve: (commentId: string) => Promise<void>;
   onReopen: (commentId: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
+  onAcceptSuggestionHunk?: (
+    commentId: string,
+    hunkId: string,
+  ) => Promise<"applied" | "unresolvable">;
+  onAcceptAllSuggestions?: (commentId: string) => Promise<void>;
+  onRejectSuggestion?: (commentId: string) => Promise<void>;
   isSelected?: boolean;
   onSelect?: () => void;
 }
@@ -24,12 +32,21 @@ export const CommentThread: React.FC<CommentThreadProps> = ({
   onResolve,
   onReopen,
   onDelete,
+  onAcceptSuggestionHunk,
+  onAcceptAllSuggestions,
+  onRejectSuggestion,
   isSelected,
   onSelect,
 }) => {
   const [replyText, setReplyText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showReplyBox, setShowReplyBox] = useState(false);
+
+  // Suggestion payloads carry a readable summary line plus the patch.
+  const suggestionHunks = parseSuggestions(comment.content);
+  const plainContent = suggestionHunks
+    ? (comment.content.split("\n")[0] ?? "")
+    : comment.content;
 
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,8 +153,21 @@ export const CommentThread: React.FC<CommentThreadProps> = ({
 
       {/* Comment Body */}
       <div className="mt-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed break-words whitespace-pre-wrap">
-        {comment.content}
+        {plainContent}
       </div>
+
+      {/* Suggestion patch card */}
+      {suggestionHunks && onAcceptSuggestionHunk && (
+        <SuggestionCard
+          hunks={suggestionHunks}
+          onAccept={(hunkId) => onAcceptSuggestionHunk(comment.id, hunkId)}
+          onAcceptAll={() =>
+            onAcceptAllSuggestions?.(comment.id) ?? Promise.resolve()
+          }
+          onReject={() => onRejectSuggestion?.(comment.id) ?? Promise.resolve()}
+          disabled={comment.resolved}
+        />
+      )}
 
       {/* Replies List */}
       {comment.replies && comment.replies.length > 0 && (
