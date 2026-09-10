@@ -22,6 +22,7 @@ import {
   Eye,
   PenTool,
   Minus,
+  Search,
 } from "lucide-react";
 import { ViewMode } from "../../types/editor";
 
@@ -33,6 +34,7 @@ interface EditorToolbarProps {
   hasSelection: boolean;
   viewMode: ViewMode;
   onChangeViewMode: (mode: ViewMode) => void;
+  onOpenSearch?: () => void;
 }
 
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
@@ -43,6 +45,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   hasSelection,
   viewMode,
   onChangeViewMode,
+  onOpenSearch,
 }) => {
   return (
     <div className="h-10 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 px-3 flex items-center justify-between gap-1 overflow-x-auto text-slate-700 dark:text-slate-300 no-print select-none">
@@ -151,6 +154,16 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded transition"
         >
           <Minus className="w-4 h-4" />
+        </button>
+
+        <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-1" />
+
+        <button
+          onClick={() => onOpenSearch?.()}
+          title="Search and replace (Ctrl+F)"
+          className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded transition"
+        >
+          <Search className="w-4 h-4" />
         </button>
 
         <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-1" />

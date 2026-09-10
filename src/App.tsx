@@ -423,6 +423,7 @@ export const App: React.FC = () => {
         onInsertBlock={(text) => editorRef.current?.insertBlock(text)}
         onOpenTableModal={() => setIsTableModalOpen(true)}
         onOpenComment={() => setIsNewCommentModalOpen(true)}
+        onOpenSearch={() => editorRef.current?.openSearch()}
         hasSelection={Boolean(selection?.text)}
         viewMode={viewMode}
         onChangeViewMode={setViewMode}
