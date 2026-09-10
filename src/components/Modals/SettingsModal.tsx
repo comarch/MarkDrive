@@ -2,6 +2,11 @@ import React, { useState } from "react";
 import { X, Settings, Key, Save, HelpCircle } from "lucide-react";
 import { AppSettings } from "../../types/editor";
 import { t } from "../../i18n";
+import {
+  AI_BUILD_ENABLED,
+  AIConnectionMode,
+  DEFAULT_AI_MODEL,
+} from "../../services/ai";
 
 type UiLanguage = "en" | "pl";
 
@@ -29,19 +34,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
   const initialLanguage: UiLanguage = settings.language === "pl" ? "pl" : "en";
   const [language, setLanguage] = useState(initialLanguage);
+  const [aiEnabled, setAIEnabled] = useState(settings.ai.enabled);
+  const [aiMode, setAIMode] = useState<AIConnectionMode>(settings.ai.mode);
+  const [aiApiKey, setAIApiKey] = useState(settings.ai.apiKey);
+  const [aiEndpoint, setAIEndpoint] = useState(settings.ai.firebaseEndpoint);
+  const [aiCompanionUrl, setAICompanionUrl] = useState(
+    settings.ai.companionBaseUrl,
+  );
+  const [aiModel, setAIModel] = useState(settings.ai.model);
 
   if (!isOpen) return null;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     onSaveSettings({
-      ...settings,
+      // Built field by field (no settings spread) so every value has a
+      // single, explicit origin.
       googleClientId: clientId.trim(),
       autoSaveIntervalMs: autoSaveInterval,
+      theme: settings.theme,
       fontSize,
       syncScroll,
       templatesFolderId: templatesFolderId.trim(),
       language,
+      richView: settings.richView,
+      ai: {
+        enabled: aiEnabled,
+        mode: aiMode,
+        apiKey: aiApiKey.trim(),
+        firebaseEndpoint: aiEndpoint.trim(),
+        companionBaseUrl: aiCompanionUrl.trim(),
+        model: aiModel.trim() || DEFAULT_AI_MODEL,
+      },
     });
     onClose();
   };
@@ -172,6 +196,111 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <option value="pl">Polski</option>
             </select>
           </div>
+
+          <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+          {/* AI assistant, only offered in builds that include it */}
+          {AI_BUILD_ENABLED && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    {t("ai.settings.section")}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {t("ai.settings.warning")}
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={aiEnabled}
+                  onChange={(e) => setAIEnabled(e.target.checked)}
+                  aria-label={t("ai.settings.enable")}
+                  className="h-4 w-4 rounded text-brand-600 focus:ring-brand-500"
+                />
+              </div>
+              {aiEnabled && (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 block mb-1">
+                      {t("ai.settings.mode")}
+                    </label>
+                    <select
+                      value={aiMode}
+                      onChange={(e) =>
+                        setAIMode(e.target.value as AIConnectionMode)
+                      }
+                      className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                    >
+                      <option value="apiKey">
+                        {t("ai.settings.mode.apiKey")}
+                      </option>
+                      <option value="firebase">
+                        {t("ai.settings.mode.firebase")}
+                      </option>
+                      <option value="companion">
+                        {t("ai.settings.mode.companion")}
+                      </option>
+                    </select>
+                  </div>
+                  {aiMode === "apiKey" && (
+                    <div>
+                      <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 block mb-1">
+                        {t("ai.settings.apiKey")}
+                      </label>
+                      <input
+                        type="password"
+                        value={aiApiKey}
+                        onChange={(e) => setAIApiKey(e.target.value)}
+                        autoComplete="off"
+                        className="w-full text-xs font-mono p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+                  )}
+                  {aiMode === "firebase" && (
+                    <div>
+                      <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 block mb-1">
+                        {t("ai.settings.endpoint")}
+                      </label>
+                      <input
+                        type="url"
+                        value={aiEndpoint}
+                        onChange={(e) => setAIEndpoint(e.target.value)}
+                        placeholder="https://"
+                        className="w-full text-xs font-mono p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+                  )}
+                  {aiMode === "companion" && (
+                    <div>
+                      <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 block mb-1">
+                        {t("ai.settings.companionUrl")}
+                      </label>
+                      <input
+                        type="url"
+                        value={aiCompanionUrl}
+                        onChange={(e) => setAICompanionUrl(e.target.value)}
+                        placeholder="https://"
+                        className="w-full text-xs font-mono p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 block mb-1">
+                      {t("ai.settings.model")}
+                    </label>
+                    <input
+                      type="text"
+                      value={aiModel}
+                      onChange={(e) => setAIModel(e.target.value)}
+                      placeholder={DEFAULT_AI_MODEL}
+                      className="w-full text-xs font-mono p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           <div className="h-px bg-slate-100 dark:bg-slate-800" />
 

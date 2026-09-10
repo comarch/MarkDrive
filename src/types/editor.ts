@@ -1,3 +1,5 @@
+import type { AISettings } from "../services/ai";
+
 export type ViewMode = "split" | "editor" | "preview";
 
 export interface OutlineItem {
@@ -30,4 +32,6 @@ export interface AppSettings {
   language: "en" | "pl";
   /** WYSIWYG overlay hiding raw Markdown marks in the editor. */
   richView: boolean;
+  /** Feature-flagged AI assistant configuration; off by default. */
+  ai: AISettings;
 }

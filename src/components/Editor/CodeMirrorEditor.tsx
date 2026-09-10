@@ -73,6 +73,8 @@ export interface CodeMirrorEditorHandle {
   scrollToLine: (lineNumber: number) => void;
   openSearch: () => void;
   getTableContext: () => TableCursorContext | null;
+  replaceSelection: (text: string) => void;
+  replaceDocument: (text: string) => void;
 }
 
 interface CodeMirrorEditorProps {
@@ -258,6 +260,28 @@ export const CodeMirrorEditor = forwardRef<
         const hasLeadingPipe = line.text.trimStart().startsWith("|");
         const column = Math.max(0, pipesBefore - (hasLeadingPipe ? 1 : 0));
         return { line: line.number, column };
+      },
+
+      replaceSelection(text: string) {
+        const view = viewRef.current;
+        if (!view) return;
+        const { from, to } = view.state.selection.main;
+        view.dispatch({
+          changes: { from, to, insert: text },
+          selection: { anchor: from + text.length },
+        });
+        view.focus();
+      },
+
+      // Full-document replacement goes through the editor transaction,
+      // so the resulting change surfaces through the normal content
+      // change listener with the same origin as typed edits.
+      replaceDocument(text: string) {
+        const view = viewRef.current;
+        if (!view) return;
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: text },
+        });
       },
     }));
 

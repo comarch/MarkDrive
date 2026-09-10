@@ -21,7 +21,10 @@ export default defineConfig({
     video: "off",
   },
   webServer: {
-    command: "npm run dev -- --port 3111 --strictPort",
+    // The e2e dev server builds with the AI assistant included, so its
+    // panel is testable. The production artifact is still built without
+    // the flag (see docs/SECURITY_MODEL.md).
+    command: "VITE_ENABLE_AI=1 npm run dev -- --port 3111 --strictPort",
     url: "http://localhost:3111",
     reuseExistingServer: true,
     timeout: 120_000,

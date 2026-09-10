@@ -52,7 +52,45 @@ export type StringKey =
   | "language.label"
   | "settings.language"
   | "mobile.showPreview"
-  | "mobile.showEditor";
+  | "mobile.showEditor"
+  | "ai.open"
+  | "ai.title"
+  | "ai.close"
+  | "ai.banner"
+  | "ai.command"
+  | "ai.thread"
+  | "ai.inputRequired"
+  | "ai.inputOptional"
+  | "ai.inputPlaceholder"
+  | "ai.run"
+  | "ai.insert"
+  | "ai.replaceDoc"
+  | "ai.copy"
+  | "ai.applySuggestion"
+  | "ai.error"
+  | "ai.cmd.draft"
+  | "ai.cmd.rewrite"
+  | "ai.cmd.shorten"
+  | "ai.cmd.grammar"
+  | "ai.cmd.translate"
+  | "ai.cmd.summarizeDoc"
+  | "ai.cmd.summarizeThread"
+  | "ai.cmd.tableFromProse"
+  | "ai.cmd.mermaidFromDescription"
+  | "ai.cmd.askDoc"
+  | "ai.cmd.changelog"
+  | "ai.cmd.commentToPatch"
+  | "ai.settings.section"
+  | "ai.settings.enable"
+  | "ai.settings.mode"
+  | "ai.settings.mode.apiKey"
+  | "ai.settings.mode.firebase"
+  | "ai.settings.mode.companion"
+  | "ai.settings.apiKey"
+  | "ai.settings.endpoint"
+  | "ai.settings.companionUrl"
+  | "ai.settings.model"
+  | "ai.settings.warning";
 
 interface CatalogueRow {
   en: string;
@@ -106,6 +144,44 @@ language.label|Language|Język
 settings.language|Interface Language|Język interfejsu
 mobile.showPreview|Switch to preview|Przełącz na podgląd
 mobile.showEditor|Switch to editor|Przełącz na edytor
+ai.open|AI assistant|Asystent AI
+ai.title|AI Assistant|Asystent AI
+ai.close|Close the AI assistant|Zamknij asystenta AI
+ai.banner|Whatever you run is sent to the configured AI provider, along with the text it needs.|To, co uruchomisz, wraz z potrzebnym tekstem trafia do skonfigurowanego dostawcy AI.
+ai.command|Command|Polecenie
+ai.thread|Comment thread|Wątek komentarzy
+ai.inputRequired|Input (required)|Dane wejściowe (wymagane)
+ai.inputOptional|Input (optional)|Dane wejściowe (opcjonalne)
+ai.inputPlaceholder|Topic, question, or prose...|Temat, pytanie albo opis...
+ai.run|Run|Uruchom
+ai.insert|Insert at cursor|Wstaw w kursor
+ai.replaceDoc|Replace document|Zamień dokument
+ai.copy|Copy|Kopiuj
+ai.applySuggestion|Apply as suggestion|Zastosuj jako sugestię
+ai.error|The command failed.|Polecenie nie powiodło się.
+ai.cmd.draft|Draft a document|Napisz dokument
+ai.cmd.rewrite|Rewrite|Przeredaguj
+ai.cmd.shorten|Shorten|Skróć
+ai.cmd.grammar|Fix grammar|Popraw gramatykę
+ai.cmd.translate|Translate (EN/PL)|Przetłumacz (EN/PL)
+ai.cmd.summarizeDoc|Summarize document|Podsumuj dokument
+ai.cmd.summarizeThread|Summarize discussion|Podsumuj dyskusję
+ai.cmd.tableFromProse|Table from prose|Tabela z opisu
+ai.cmd.mermaidFromDescription|Mermaid from description|Diagram Mermaid z opisu
+ai.cmd.askDoc|Ask the document|Zapytaj dokument
+ai.cmd.changelog|Changelog from versions|Lista zmian z wersji
+ai.cmd.commentToPatch|Address reviewer comment|Odpowiedz na komentarz recenzenta
+ai.settings.section|AI Assistant|Asystent AI
+ai.settings.enable|Enable the AI assistant|Włącz asystenta AI
+ai.settings.mode|Connection mode|Tryb połączenia
+ai.settings.mode.apiKey|Google AI Studio key|Klucz Google AI Studio
+ai.settings.mode.firebase|Firebase AI Logic endpoint|Endpoint Firebase AI Logic
+ai.settings.mode.companion|Companion service|Usługa towarzysząca
+ai.settings.apiKey|API key|Klucz API
+ai.settings.endpoint|Endpoint URL|Adres endpointu
+ai.settings.companionUrl|Companion base URL|Bazowy adres usługi towarzyszącej
+ai.settings.model|Model name|Nazwa modelu
+ai.settings.warning|Document content is sent to the configured provider. The key is kept for this session only.|Treść dokumentu trafia do skonfigurowanego dostawcy. Klucz jest przechowywany tylko do końca sesji.
 `;
 
 const parseCatalogue = (raw: string): Record<StringKey, CatalogueRow> => {

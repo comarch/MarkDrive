@@ -24,6 +24,7 @@ import {
   Network,
   Presentation,
   Type,
+  Sparkles,
 } from "lucide-react";
 import { DriveUser, SaveStatus, DriveFileMetadata } from "../../types/drive";
 import {
@@ -62,6 +63,10 @@ interface AppHeaderProps {
   isOutlineOpen: boolean;
   richView: boolean;
   onToggleRichView: () => void;
+  /** AI assistant availability: build flag AND the settings toggle. */
+  aiEnabled: boolean;
+  isAIOpen: boolean;
+  onToggleAI: () => void;
   onOpenHistory?: () => void;
   isHistoryOpen?: boolean;
   onOpenProperties?: () => void;
@@ -99,6 +104,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   isOutlineOpen,
   richView,
   onToggleRichView,
+  aiEnabled,
+  isAIOpen,
+  onToggleAI,
   onOpenHistory,
   isHistoryOpen = false,
   onOpenProperties,
@@ -368,6 +376,23 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </button>
 
         <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-0.5" />
+
+        {/* AI assistant; rendered only when the build and settings allow */}
+        {aiEnabled && (
+          <button
+            onClick={onToggleAI}
+            title={t("ai.open")}
+            aria-label={t("ai.open")}
+            aria-pressed={isAIOpen}
+            className={`p-1.5 rounded-lg transition ${
+              isAIOpen
+                ? "bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400"
+                : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+          </button>
+        )}
 
         {/* WYSIWYG rich text view toggle */}
         <button
