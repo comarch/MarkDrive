@@ -16,7 +16,12 @@ import {
   historyKeymap,
   indentWithTab,
 } from "@codemirror/commands";
-import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
+import {
+  search,
+  searchKeymap,
+  highlightSelectionMatches,
+  openSearchPanel,
+} from "@codemirror/search";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import {
@@ -34,6 +39,7 @@ export interface CodeMirrorEditorHandle {
   scrollToPercentage: (percentage: number) => void;
   focus: () => void;
   scrollToLine: (lineNumber: number) => void;
+  openSearch: () => void;
 }
 
 interface CodeMirrorEditorProps {
@@ -135,6 +141,13 @@ export const CodeMirrorEditor = forwardRef<
     focus() {
       viewRef.current?.focus();
     },
+
+    openSearch() {
+      const view = viewRef.current;
+      if (!view) return;
+      openSearchPanel(view);
+      view.focus();
+    },
   }));
 
   // Initialize CodeMirror editor
@@ -171,6 +184,7 @@ export const CodeMirrorEditor = forwardRef<
       bracketMatching(),
       highlightActiveLine(),
       highlightSelectionMatches(),
+      search({ top: true }),
       EditorView.lineWrapping,
       markdown({
         base: markdownLanguage,
