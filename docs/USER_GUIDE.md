@@ -135,6 +135,20 @@ and a merge dialog opens:
 The saved result becomes the newest Drive revision, so nothing is lost
 silently.
 
+## Version history
+
+Select the history button in the header to open version history for the open
+Drive file.
+
+- every save records a Drive revision, subject to the retention of the Drive
+  plan;
+- select a version to compare it with the open document as a line diff;
+- select **Restore** to write the selected version into the document. Restoring
+  records a new revision rather than deleting history.
+
+Demo mode keeps revisions in browser storage, so the workflow can be evaluated
+without Drive access.
+
 ## Export
 
 Select the export button in the header.

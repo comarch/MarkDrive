@@ -133,4 +133,120 @@ describe("GoogleDriveService", () => {
       new Headers((call[1] as RequestInit).headers).get("Authorization"),
     ).toBe("Bearer real_test_token");
   });
+
+  it("tracks mock revisions and restores their content", async () => {
+    const service = await createDriveService();
+    const created = await service.createFile("notes", "version 1");
+
+    expect(created.headRevisionId).toBe("mock_rev_1");
+
+    await service.updateFile(created.id, "version 2");
+    await service.updateFile(created.id, "version 3");
+    await service.updateFile(created.id, "version 4");
+
+    const revisions = await service.listRevisions(created.id);
+    expect(revisions.map((revision) => revision.id)).toEqual([
+      "mock_rev_4",
+      "mock_rev_3",
+      "mock_rev_2",
+      "mock_rev_1",
+    ]);
+    expect(await service.getRevisionContent(created.id, "mock_rev_1")).toBe(
+      "version 1",
+    );
+    expect(await service.getRevisionContent(created.id, "mock_rev_2")).toBe(
+      "version 2",
+    );
+    expect(await service.getRevisionContent(created.id, "mock_rev_3")).toBe(
+      "version 3",
+    );
+    expect(await service.getRevisionContent(created.id, "mock_rev_4")).toBe(
+      "version 4",
+    );
+
+    await service.restoreRevision(created.id, "mock_rev_1");
+    expect((await service.getFile(created.id)).content).toBe("version 1");
+    expect(await service.fetchHeadRevisionId(created.id)).toBe("mock_rev_5");
+  });
+
+  it("rejects malformed ids before building revision request URLs", async () => {
+    const service = await createDriveService();
+    await expect(service.listRevisions("file?x=1")).rejects.toThrow(
+      "Invalid file id",
+    );
+    await expect(
+      service.getRevisionContent("file_123", "../etc"),
+    ).rejects.toThrow("Invalid revision id");
+  });
+
+  it("lists real revisions newest first across pages", async () => {
+    setRealToken();
+    const service = await createDriveService();
+    // Drive returns the oldest revisions first, so page one carries rev_1.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            revisions: [{ id: "rev_1", modifiedTime: "2026-01-01T00:00:00Z" }],
+            nextPageToken: "page_2",
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            revisions: [{ id: "rev_2", modifiedTime: "2026-01-02T00:00:00Z" }],
+          }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(service.listRevisions("file_123")).resolves.toEqual([
+      { id: "rev_2", modifiedTime: "2026-01-02T00:00:00Z" },
+      { id: "rev_1", modifiedTime: "2026-01-01T00:00:00Z" },
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const firstCall = fetchMock.mock.calls[0];
+    const secondCall = fetchMock.mock.calls[1];
+    if (!firstCall || !secondCall) {
+      throw new Error("Expected revisions requests");
+    }
+    const fields =
+      "fields=nextPageToken,revisions(id,modifiedTime,lastModifyingUser(displayName,emailAddress))&pageSize=100";
+    expect(firstCall[0]).toBe(
+      `https://www.googleapis.com/drive/v3/files/file_123/revisions?${fields}`,
+    );
+    expect(secondCall[0]).toBe(
+      `https://www.googleapis.com/drive/v3/files/file_123/revisions?${fields}&pageToken=page_2`,
+    );
+    expect(
+      new Headers((firstCall[1] as RequestInit).headers).get("Authorization"),
+    ).toBe("Bearer real_test_token");
+  });
+
+  it("gets real revision content", async () => {
+    setRealToken();
+    const service = await createDriveService();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response("saved revision", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(service.getRevisionContent("file_123", "rev_1")).resolves.toBe(
+      "saved revision",
+    );
+
+    const call = fetchMock.mock.calls[0];
+    if (!call) throw new Error("Expected revision content request");
+    expect(call[0]).toBe(
+      "https://www.googleapis.com/drive/v3/files/file_123/revisions/rev_1?alt=media",
+    );
+    expect(
+      new Headers((call[1] as RequestInit).headers).get("Authorization"),
+    ).toBe("Bearer real_test_token");
+  });
 });

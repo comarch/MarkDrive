@@ -4,6 +4,7 @@ import {
   FilePlus,
   Download,
   ListTree,
+  History,
   MessageSquare,
   Moon,
   Sun,
@@ -35,6 +36,8 @@ interface AppHeaderProps {
   onOpenExportModal: () => void;
   onToggleOutline: () => void;
   isOutlineOpen: boolean;
+  onOpenHistory?: () => void;
+  isHistoryOpen?: boolean;
   onToggleComments: () => void;
   isCommentsOpen: boolean;
   openCommentsCount: number;
@@ -56,6 +59,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenExportModal,
   onToggleOutline,
   isOutlineOpen,
+  onOpenHistory,
+  isHistoryOpen = false,
   onToggleComments,
   isCommentsOpen,
   openCommentsCount,
@@ -235,6 +240,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         >
           <ListTree className="w-4 h-4" />
         </button>
+
+        {/* Drive version history button */}
+        {onOpenHistory && (
+          <button
+            onClick={onOpenHistory}
+            title="Version history"
+            className={`p-1.5 rounded-lg transition ${
+              isHistoryOpen
+                ? "bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400"
+                : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+            }`}
+          >
+            <History className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Google Drive Comments Drawer Button */}
         <button
