@@ -50,6 +50,13 @@ Use the toolbar for:
 - Mermaid diagrams;
 - comments.
 
+### Search and replace
+
+Select the search button in the toolbar or press `Ctrl+F` / `Cmd+F`. The search
+panel supports regular expressions, case sensitivity, single replace, and
+replace all. Replace all applies as one edit, so a single `Ctrl+Z` undoes the
+whole replacement.
+
 ### View modes
 
 | Mode         | Use it for                            |
@@ -133,6 +140,7 @@ The OAuth client ID is normally supplied by the deployment environment. Manual e
 | Add comment | `Ctrl+Alt+M`  | `Cmd+Alt+M` |
 | Bold        | `Ctrl+B`      | `Cmd+B`     |
 | Italic      | `Ctrl+I`      | `Cmd+I`     |
+| Search      | `Ctrl+F`      | `Cmd+F`     |
 | Print / PDF | `Ctrl+P`      | `Cmd+P`     |
 
 ## Troubleshooting
