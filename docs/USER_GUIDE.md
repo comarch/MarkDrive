@@ -31,6 +31,14 @@ opens it in place, and unsaved changes ask for confirmation first. The app's
 Drive scope does not see files it never touched, so open those from Google
 Drive once and they join the list.
 
+## Follow cross-document links
+
+Relative Markdown links, like `[Notes](notes.md)`, point at files in the same
+Drive folder as the open document. Selecting one in the preview opens that file
+in place. Resolution is cached for the session, and a link that cannot be
+resolved reports which file name was missing instead of failing silently. The
+document must live in a Drive folder for links to resolve.
+
 ## Connect your account
 
 1. Select **Sign In** in the top-right corner.

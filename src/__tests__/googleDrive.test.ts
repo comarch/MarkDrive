@@ -301,4 +301,50 @@ describe("GoogleDriveService", () => {
       new Headers((call[1] as RequestInit).headers).get("Authorization"),
     ).toBe("Bearer real_test_token");
   });
+
+  it("finds a mock file by name inside a folder", async () => {
+    const service = await createDriveService();
+    const created = await service.createFile("notes", "content", "folder_1");
+
+    expect(created.parents).toEqual(["folder_1"]);
+    await expect(
+      service.findFileInFolder("notes.md", "folder_1"),
+    ).resolves.toBe(created.id);
+    await expect(
+      service.findFileInFolder("Notes.MD", "folder_1"),
+    ).resolves.toBe(created.id);
+    await expect(
+      service.findFileInFolder("missing.md", "folder_1"),
+    ).resolves.toBe(null);
+  });
+
+  it("finds a real file by name inside a folder", async () => {
+    setRealToken();
+    const service = await createDriveService();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ files: [{ id: "file_9", name: "notes.md" }] }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      service.findFileInFolder("notes.md", "folder_1"),
+    ).resolves.toBe("file_9");
+
+    const call = fetchMock.mock.calls[0];
+    if (!call) throw new Error("Expected folder search request");
+    const requestUrl = String(call[0]);
+    expect(requestUrl).toContain("https://www.googleapis.com/drive/v3/files?");
+    // encodeURIComponent leaves apostrophes literal (they are unreserved),
+    // so the Drive query keeps its single quotes after encoding.
+    expect(requestUrl).toContain("name%20%3D%20'notes.md'");
+    expect(requestUrl).toContain("'folder_1'%20in%20parents");
+    expect(
+      new Headers((call[1] as RequestInit).headers).get("Authorization"),
+    ).toBe("Bearer real_test_token");
+  });
 });

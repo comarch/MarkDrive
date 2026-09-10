@@ -86,6 +86,7 @@ const ALLOWED_ATTRIBUTES = [
   "columnspacing",
   "data-comment-id",
   "data-task-line",
+  "data-doc-link",
   "depth",
   "disabled",
   "display",
@@ -300,7 +301,22 @@ export function parseMarkdown(
   });
   const highlightedHtml = injectCommentHighlights(annotatedHtml, comments);
 
-  return DOMPurify.sanitize(highlightedHtml, {
+  // Relative links point at Markdown files in the same Drive folder; the
+  // preview resolves them on click instead of navigating the browser.
+  const docLinkPattern = /<a href="([^"]+)"/g;
+  const withDocLinks = highlightedHtml.replace(
+    docLinkPattern,
+    (match, href: string) => {
+      const isExternal =
+        /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(href) ||
+        href.startsWith("#") ||
+        /^data:/i.test(href);
+      if (isExternal) return match;
+      return `<a href="${href}" class="doc-link" data-doc-link="${href}"`;
+    },
+  );
+
+  return DOMPurify.sanitize(withDocLinks, {
     ALLOWED_ATTR: ALLOWED_ATTRIBUTES,
     ALLOWED_TAGS,
     ALLOW_ARIA_ATTR: true,

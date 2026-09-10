@@ -23,6 +23,7 @@ interface MarkdownPreviewProps {
   onScroll?: (percentage: number) => void;
   onSelectComment?: (commentId: string) => void;
   onToggleTask?: (lineNumber: number, checked: boolean) => void;
+  onOpenDocLink?: (target: string) => void;
 }
 
 // Mermaid configuration
@@ -37,7 +38,15 @@ export const MarkdownPreview = forwardRef<
   MarkdownPreviewProps
 >(
   (
-    { content, comments = [], isDark, onScroll, onSelectComment, onToggleTask },
+    {
+      content,
+      comments = [],
+      isDark,
+      onScroll,
+      onSelectComment,
+      onToggleTask,
+      onOpenDocLink,
+    },
     ref,
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -135,6 +144,15 @@ export const MarkdownPreview = forwardRef<
           onSelectComment(commentId);
           return;
         }
+      }
+
+      // Relative links open Markdown files in the same Drive folder
+      const docLink = target.closest("a.doc-link");
+      if (docLink) {
+        e.preventDefault();
+        const docTarget = (docLink as HTMLElement).dataset.docLink;
+        if (docTarget && onOpenDocLink) onOpenDocLink(docTarget);
+        return;
       }
 
       // Open links in new tab
