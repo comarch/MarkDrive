@@ -63,6 +63,13 @@ Task list checkboxes in the preview are clickable. Ticking a box rewrites the
 Markdown source line, so the change is part of the portable file and survives
 export.
 
+### Paste images
+
+Paste or drop an image into the editor while a Drive document is open. MarkQuire
+uploads the image to the same Drive folder and inserts a Markdown image
+reference at the cursor. Image upload needs a signed-in session and edit access
+to the folder. In demo mode pasted images are not uploaded.
+
 ### View modes
 
 | Mode         | Use it for                            |
