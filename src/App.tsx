@@ -18,6 +18,7 @@ import { ExportModal } from "./components/Modals/ExportModal";
 import { InsertTableModal } from "./components/Modals/InsertTableModal";
 import { OutlineSidebar } from "./components/Modals/OutlineSidebar";
 import { ConflictModal } from "./components/Modals/ConflictModal";
+import { HistorySidebar } from "./components/Modals/HistorySidebar";
 
 import { authService } from "./services/googleAuth";
 import { driveService } from "./services/googleDrive";
@@ -31,6 +32,7 @@ import {
   DriveFileMetadata,
   SaveStatus,
   DriveComment,
+  DriveRevision,
 } from "./types/drive";
 import {
   ViewMode,
@@ -111,6 +113,18 @@ export const App: React.FC = () => {
     baseContent: string;
     remoteContent: string;
   } | null>(null);
+
+  // Drive version history
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyRevisions, setHistoryRevisions] = useState<DriveRevision[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historySelectedId, setHistorySelectedId] = useState<string | null>(
+    null,
+  );
+  const [historySelectedContent, setHistorySelectedContent] = useState<
+    string | null
+  >(null);
 
   // Editor Selection & View Mode
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
@@ -294,6 +308,81 @@ export const App: React.FC = () => {
     isConflictOpenRef.current = false;
     setSaveStatus("unsaved");
   }, []);
+
+  // Load the revision list for the open Drive file
+  const loadHistory = useCallback(async (fileId: string) => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const revisions = await driveService.listRevisions(fileId);
+      setHistoryRevisions(revisions);
+    } catch (err) {
+      setHistoryError(err instanceof Error ? err.message : "Unknown error");
+      setHistoryRevisions([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  const handleOpenHistory = useCallback(async () => {
+    setIsHistoryOpen(true);
+    setHistorySelectedId(null);
+    setHistorySelectedContent(null);
+    if (fileMetadata) {
+      await loadHistory(fileMetadata.id);
+    }
+  }, [fileMetadata, loadHistory]);
+
+  const handleSelectRevision = useCallback(
+    async (revisionId: string) => {
+      if (!fileMetadata) return;
+      setHistorySelectedId(revisionId);
+      setHistorySelectedContent(null);
+      setHistoryError(null);
+      try {
+        const revisionContent = await driveService.getRevisionContent(
+          fileMetadata.id,
+          revisionId,
+        );
+        setHistorySelectedContent(revisionContent);
+      } catch (err) {
+        setHistoryError(err instanceof Error ? err.message : "Unknown error");
+      }
+    },
+    [fileMetadata],
+  );
+
+  const handleRestoreRevision = useCallback(
+    async (revisionId: string) => {
+      if (!fileMetadata) return;
+      if (saveStatus === "unsaved") {
+        const confirmRestore = window.confirm(
+          "You have unsaved changes. Restore the selected version anyway?",
+        );
+        if (!confirmRestore) return;
+      }
+      try {
+        // restoreRevision writes the selected content to Drive as a new
+        // revision, then we mirror it locally.
+        await driveService.restoreRevision(fileMetadata.id, revisionId);
+        const restored = await driveService.getFile(fileMetadata.id);
+        setFileMetadata((prev) =>
+          prev ? { ...prev, ...restored.metadata } : restored.metadata,
+        );
+        setContent(restored.content);
+        localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, restored.content);
+        lastSyncedContentRef.current = restored.content;
+        setSaveStatus("saved");
+        await loadHistory(fileMetadata.id);
+        setHistorySelectedId(null);
+        setHistorySelectedContent(null);
+      } catch (err) {
+        console.error("Failed to restore revision:", err);
+        setHistoryError(err instanceof Error ? err.message : "Unknown error");
+      }
+    },
+    [fileMetadata, loadHistory, saveStatus],
+  );
 
   // Handle document content change & auto-save
   const handleContentChange = (newContent: string) => {
@@ -526,6 +615,8 @@ export const App: React.FC = () => {
         onOpenExportModal={() => setIsExportOpen(true)}
         onToggleOutline={() => setIsOutlineOpen(!isOutlineOpen)}
         isOutlineOpen={isOutlineOpen}
+        onOpenHistory={handleOpenHistory}
+        isHistoryOpen={isHistoryOpen}
         onToggleComments={() => setIsCommentsOpen(!isCommentsOpen)}
         isCommentsOpen={isCommentsOpen}
         openCommentsCount={openCommentsCount}
@@ -618,6 +709,21 @@ export const App: React.FC = () => {
           onReopenComment={handleReopenComment}
           onDeleteComment={handleDeleteComment}
           onOpenNewComment={() => setIsNewCommentModalOpen(true)}
+        />
+
+        {/* Drive Version History Sidebar Drawer */}
+        <HistorySidebar
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          revisions={historyRevisions}
+          loading={historyLoading}
+          error={historyError}
+          selectedId={historySelectedId}
+          selectedContent={historySelectedContent}
+          currentContent={content}
+          onSelect={handleSelectRevision}
+          onRestore={handleRestoreRevision}
+          onRefresh={() => fileMetadata && loadHistory(fileMetadata.id)}
         />
       </div>
 
