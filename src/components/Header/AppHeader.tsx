@@ -3,6 +3,7 @@ import {
   Save,
   FilePlus,
   FolderOpen,
+  FileCog,
   Download,
   ListTree,
   History,
@@ -40,6 +41,7 @@ interface AppHeaderProps {
   isOutlineOpen: boolean;
   onOpenHistory?: () => void;
   isHistoryOpen?: boolean;
+  onOpenProperties?: () => void;
   onToggleComments: () => void;
   isCommentsOpen: boolean;
   openCommentsCount: number;
@@ -64,6 +66,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   isOutlineOpen,
   onOpenHistory,
   isHistoryOpen = false,
+  onOpenProperties,
   onToggleComments,
   isCommentsOpen,
   openCommentsCount,
@@ -267,6 +270,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             }`}
           >
             <History className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Frontmatter properties button */}
+        {onOpenProperties && (
+          <button
+            onClick={onOpenProperties}
+            title="Document properties"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+          >
+            <FileCog className="w-4 h-4" />
           </button>
         )}
 

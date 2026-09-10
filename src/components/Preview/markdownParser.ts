@@ -7,6 +7,10 @@ import katex from "katex";
 import DOMPurify from "dompurify";
 import { DriveComment } from "../../types/drive";
 import { findTaskListLines } from "../../utils/tasks";
+import {
+  frontmatterLineOffset,
+  parseFrontmatter,
+} from "../../utils/frontmatter";
 
 // Long quoted text makes the lazy-quantifier highlight regex backtrack
 // quadratically on large documents; skip highlighting above this cap.
@@ -277,9 +281,15 @@ export function parseMarkdown(
   markdownText: string,
   comments: DriveComment[] = [],
 ): string {
-  const withMath = renderMathFormulas(markdownText);
+  // Frontmatter is metadata: hidden from the preview, kept in the source.
+  const { body } = parseFrontmatter(markdownText);
+  const withMath = renderMathFormulas(body);
   const rawHtml = md.render(withMath);
-  const taskLines = findTaskListLines(markdownText);
+  // Task checkboxes map back to source lines, so add the hidden block height.
+  const taskLineOffset = frontmatterLineOffset(markdownText);
+  const taskLines = findTaskListLines(body).map(
+    (line) => line + taskLineOffset,
+  );
   const taskCheckboxPattern =
     /<input\b[^>]*class="[^"]*\btask-list-item-checkbox\b[^"]*"[^>]*>/g;
   // Pair rendered checkboxes with source lines by index. When the two counts

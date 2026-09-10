@@ -35,6 +35,14 @@ describe("markdownParser", () => {
     expect(html).not.toContain('data-doc-link="mailto:a@b.c"');
   });
 
+  it("hides frontmatter from the preview and keeps task line numbers", () => {
+    const md = "---\ntitle: Notes\n---\n\n- [ ] Task\n";
+    const html = parseMarkdown(md);
+
+    expect(html).not.toContain("title");
+    expect(html).toContain('data-task-line="5"');
+  });
+
   it("renders tables", () => {
     const md = "| Col 1 | Col 2 |\n| --- | --- |\n| Val 1 | Val 2 |";
     const html = parseMarkdown(md);

@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { AppHeader } from "./components/Header/AppHeader";
 import { EditorToolbar } from "./components/Editor/EditorToolbar";
 import {
@@ -20,6 +26,7 @@ import { OutlineSidebar } from "./components/Modals/OutlineSidebar";
 import { ConflictModal } from "./components/Modals/ConflictModal";
 import { HistorySidebar } from "./components/Modals/HistorySidebar";
 import { FileBrowserModal } from "./components/Modals/FileBrowserModal";
+import { PropertiesPanel } from "./components/Editor/PropertiesPanel";
 
 import { authService } from "./services/googleAuth";
 import { driveService } from "./services/googleDrive";
@@ -27,6 +34,7 @@ import { commentsService } from "./services/googleComments";
 import { parseDriveStateFromUrl, updateUrlFileId } from "./services/driveState";
 import { SAMPLE_MARKDOWN } from "./utils/sampleDocument";
 import { toggleTaskLine } from "./utils/tasks";
+import { parseFrontmatter, updateFrontmatterField } from "./utils/frontmatter";
 
 import {
   DriveUser,
@@ -134,6 +142,9 @@ export const App: React.FC = () => {
   );
   const [fileBrowserLoading, setFileBrowserLoading] = useState(false);
   const [fileBrowserError, setFileBrowserError] = useState<string | null>(null);
+
+  // Frontmatter properties panel
+  const [isPropertiesOpen, setIsPropertiesOpen] = useState(false);
 
   // Editor Selection & View Mode
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
@@ -666,6 +677,19 @@ export const App: React.FC = () => {
     }
   };
 
+  // Frontmatter fields shown in the properties panel
+  const frontmatterFields = useMemo(
+    () => parseFrontmatter(content).fields,
+    [content],
+  );
+
+  const handleUpdateFrontmatterField = (key: string, value: string) => {
+    const updated = updateFrontmatterField(content, key, value);
+    if (updated !== content) {
+      handleContentChange(updated);
+    }
+  };
+
   // Synchronized Scrolling Handlers
   const handleEditorScroll = (pct: number) => {
     if (settings.syncScroll && viewMode === "split") {
@@ -727,6 +751,7 @@ export const App: React.FC = () => {
         isOutlineOpen={isOutlineOpen}
         onOpenHistory={handleOpenHistory}
         isHistoryOpen={isHistoryOpen}
+        onOpenProperties={() => setIsPropertiesOpen(true)}
         onToggleComments={() => setIsCommentsOpen(!isCommentsOpen)}
         isCommentsOpen={isCommentsOpen}
         openCommentsCount={openCommentsCount}
@@ -862,6 +887,14 @@ export const App: React.FC = () => {
         error={fileBrowserError}
         onSelect={handleOpenFile}
         onRefresh={loadFileList}
+      />
+
+      {/* Frontmatter Properties Panel */}
+      <PropertiesPanel
+        isOpen={isPropertiesOpen}
+        onClose={() => setIsPropertiesOpen(false)}
+        fields={frontmatterFields}
+        onUpdateField={handleUpdateFrontmatterField}
       />
 
       {/* Save Conflict Resolution Modal */}

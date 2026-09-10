@@ -39,6 +39,22 @@ in place. Resolution is cached for the session, and a link that cannot be
 resolved reports which file name was missing instead of failing silently. The
 document must live in a Drive folder for links to resolve.
 
+## Edit document properties
+
+Documents can start with a YAML frontmatter block, like this:
+
+```markdown
+---
+title: Release notes
+status: reviewed
+---
+```
+
+The preview hides the block. Select the properties button in the header to
+view and edit the fields: string values are editable inline, richer values
+stay read-only, and new fields append at the end. An open-edit-save cycle
+that never touches the panel rewrites nothing.
+
 ## Connect your account
 
 1. Select **Sign In** in the top-right corner.
