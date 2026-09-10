@@ -40,4 +40,12 @@ export default defineConfig(
       globals: globals.node,
     },
   },
+  {
+    files: ["e2e/**/*.ts"],
+    extends: [eslint.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: { ...globals.browser, ...globals.node },
+    },
+  },
 );

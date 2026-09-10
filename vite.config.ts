@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { configDefaults } from "vitest/config";
 
 // GitHub Pages serves the app from a repository subpath, container and
 // custom-domain deployments serve it from the root.
@@ -18,6 +19,8 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // Playwright owns e2e/*.spec.ts; Vitest must not load those files.
+    exclude: [...configDefaults.exclude, "e2e/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
