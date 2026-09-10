@@ -48,9 +48,9 @@ describe("inlineKatexFonts", () => {
     expect(inlined).not.toMatch(
       /url\((['"]?)fonts\/KaTeX_[A-Za-z0-9-]+\.woff2\1\)/,
     );
-    expect(inlined.match(/data:font\/woff2/g)?.length ?? 0).toBeGreaterThanOrEqual(
-      20,
-    );
+    expect(
+      inlined.match(/data:font\/woff2/g)?.length ?? 0,
+    ).toBeGreaterThanOrEqual(20);
   });
 
   it("leaves unknown fonts untouched", () => {

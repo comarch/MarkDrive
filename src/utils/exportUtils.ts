@@ -82,13 +82,14 @@ ${styles.katexCss}
  * including KaTeX fonts, are inlined as data so the file works offline
  * and without any external requests.
  */
-export async function exportAsHtml(
-  filename: string,
-  markdownContent: string,
-) {
+export async function exportAsHtml(filename: string, markdownContent: string) {
   const finalName = filename.replace(/\.md$/, "") + ".html";
   const { exportStyles } = await import("./exportAssets");
-  const htmlDocument = buildHtmlDocument(filename, markdownContent, exportStyles);
+  const htmlDocument = buildHtmlDocument(
+    filename,
+    markdownContent,
+    exportStyles,
+  );
 
   const blob = new Blob([htmlDocument], { type: "text/html;charset=utf-8" });
   downloadBlob(blob, finalName);
