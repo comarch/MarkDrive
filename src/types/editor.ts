@@ -24,4 +24,6 @@ export interface AppSettings {
   theme: "light" | "dark" | "system";
   fontSize: number;
   syncScroll: boolean;
+  /** Drive folder id holding organization templates; empty disables. */
+  templatesFolderId: string;
 }
