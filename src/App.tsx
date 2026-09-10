@@ -347,6 +347,12 @@ export const App: React.FC = () => {
   const handleSelectRevision = useCallback(
     async (revisionId: string) => {
       if (!fileMetadata) return;
+      // Only revisions from the loaded history can be previewed, so the id
+      // is always one Drive returned and never an arbitrary string.
+      if (!historyRevisions.some((revision) => revision.id === revisionId)) {
+        setHistoryError("Unknown revision");
+        return;
+      }
       setHistorySelectedId(revisionId);
       setHistorySelectedContent(null);
       setHistoryError(null);
@@ -360,12 +366,17 @@ export const App: React.FC = () => {
         setHistoryError(err instanceof Error ? err.message : "Unknown error");
       }
     },
-    [fileMetadata],
+    [fileMetadata, historyRevisions],
   );
 
   const handleRestoreRevision = useCallback(
     async (revisionId: string) => {
       if (!fileMetadata) return;
+      // Restoring accepts only ids from the loaded revision list.
+      if (!historyRevisions.some((revision) => revision.id === revisionId)) {
+        setHistoryError("Unknown revision");
+        return;
+      }
       if (saveStatus === "unsaved") {
         const confirmRestore = window.confirm(
           "You have unsaved changes. Restore the selected version anyway?",
@@ -393,7 +404,7 @@ export const App: React.FC = () => {
         setHistoryError(err instanceof Error ? err.message : "Unknown error");
       }
     },
-    [fileMetadata, loadHistory, saveStatus],
+    [fileMetadata, historyRevisions, loadHistory, saveStatus],
   );
 
   // Load the recent Markdown file list

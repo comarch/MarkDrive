@@ -341,7 +341,11 @@ export class GoogleDriveService {
       return entry?.metadata.id ?? null;
     }
 
-    const escapedName = name.replace(/'/g, "\\'");
+    // Escape backslashes first so they cannot dodge the quote escaping,
+    // then escape single quotes for the Drive query syntax.
+    const escapedName = name
+      .replace(/\\/g, String.raw`\\`)
+      .replace(/'/g, String.raw`\'`);
     const query = encodeURIComponent(
       `name = '${escapedName}' and '${folderId}' in parents`,
     );

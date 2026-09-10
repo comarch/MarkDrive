@@ -339,8 +339,10 @@ describe("GoogleDriveService", () => {
     if (!call) throw new Error("Expected folder search request");
     const requestUrl = String(call[0]);
     expect(requestUrl).toContain("https://www.googleapis.com/drive/v3/files?");
-    expect(requestUrl).toContain("name%20%3D%20%27notes.md%27");
-    expect(requestUrl).toContain("%27folder_1%27%20in%20parents");
+    // encodeURIComponent leaves apostrophes literal (they are unreserved),
+    // so the Drive query keeps its single quotes after encoding.
+    expect(requestUrl).toContain("name%20%3D%20'notes.md'");
+    expect(requestUrl).toContain("'folder_1'%20in%20parents");
     expect(
       new Headers((call[1] as RequestInit).headers).get("Authorization"),
     ).toBe("Bearer real_test_token");

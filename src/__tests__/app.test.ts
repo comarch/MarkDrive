@@ -26,11 +26,11 @@ describe("markdownParser", () => {
 
   it("marks relative links as cross-document links", () => {
     const md =
-      "[Notes](notes.md), [External](https://example.com), [Local](#section), [Mail](mailto:a@b.c)";
+      "[Notes](notes.md), [External](https://external.example), [Local](#section), [Mail](mailto:a@b.c)";
     const html = parseMarkdown(md);
 
     expect(html).toContain('data-doc-link="notes.md"');
-    expect(html).not.toContain('data-doc-link="https://example.com');
+    expect(html).not.toContain('data-doc-link="https://external.example');
     expect(html).not.toContain('data-doc-link="#section"');
     expect(html).not.toContain('data-doc-link="mailto:a@b.c"');
   });

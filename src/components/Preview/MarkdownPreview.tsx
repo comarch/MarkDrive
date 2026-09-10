@@ -150,7 +150,7 @@ export const MarkdownPreview = forwardRef<
       const docLink = target.closest("a.doc-link");
       if (docLink) {
         e.preventDefault();
-        const docTarget = docLink.getAttribute("data-doc-link");
+        const docTarget = (docLink as HTMLElement).dataset.docLink;
         if (docTarget && onOpenDocLink) onOpenDocLink(docTarget);
         return;
       }
