@@ -6,6 +6,11 @@ import hljs from "highlight.js";
 import katex from "katex";
 import DOMPurify from "dompurify";
 import { DriveComment } from "../../types/drive";
+import { findTaskListLines } from "../../utils/tasks";
+
+// Long quoted text makes the lazy-quantifier highlight regex backtrack
+// quadratically on large documents; skip highlighting above this cap.
+const MAX_HIGHLIGHT_QUOTE_LENGTH = 200;
 
 const ALLOWED_TAGS = [
   "a",
@@ -80,6 +85,7 @@ const ALLOWED_ATTRIBUTES = [
   "columnalign",
   "columnspacing",
   "data-comment-id",
+  "data-task-line",
   "depth",
   "disabled",
   "display",
@@ -131,7 +137,13 @@ DOMPurify.addHook("uponSanitizeAttribute", (_node, data) => {
 
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   if (node.nodeName === "INPUT") {
-    node.setAttribute("disabled", "");
+    const isTaskCheckbox = node.classList.contains("task-list-item-checkbox");
+    // Preview click handling needs the click event, and browsers suppress events on disabled inputs.
+    if (isTaskCheckbox) {
+      node.removeAttribute("disabled");
+    } else {
+      node.setAttribute("disabled", "");
+    }
     node.setAttribute("type", "checkbox");
   }
   if (node.nodeName === "A") {
@@ -233,6 +245,7 @@ export function injectCommentHighlights(
   comments.forEach((comment) => {
     const quoted = comment.quotedFileContent?.value?.trim();
     if (!quoted || quoted.length < 2) return;
+    if (quoted.length > MAX_HIGHLIGHT_QUOTE_LENGTH) return;
 
     // Avoid injecting into tag attributes or pre/code tags
     const escapedQuoted = quoted.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -265,7 +278,27 @@ export function parseMarkdown(
 ): string {
   const withMath = renderMathFormulas(markdownText);
   const rawHtml = md.render(withMath);
-  const highlightedHtml = injectCommentHighlights(rawHtml, comments);
+  const taskLines = findTaskListLines(markdownText);
+  const taskCheckboxPattern =
+    /<input\b[^>]*class="[^"]*\btask-list-item-checkbox\b[^"]*"[^>]*>/g;
+  // Pair rendered checkboxes with source lines by index. When the two counts
+  // disagree (edge syntax the regex and the renderer treat differently), skip
+  // the annotation entirely so a click can never toggle the wrong line.
+  const linesMatchRendered =
+    (rawHtml.match(taskCheckboxPattern)?.length ?? 0) === taskLines.length;
+  let taskCheckboxIndex = 0;
+  const annotatedHtml = rawHtml.replace(taskCheckboxPattern, (tag) => {
+    if (!linesMatchRendered) return tag;
+    const lineNumber = taskLines[taskCheckboxIndex];
+    taskCheckboxIndex += 1;
+    if (lineNumber === undefined) return tag;
+
+    return tag.replace(
+      /\/?>$/,
+      (closing) => ` data-task-line="${lineNumber}"${closing}`,
+    );
+  });
+  const highlightedHtml = injectCommentHighlights(annotatedHtml, comments);
 
   return DOMPurify.sanitize(highlightedHtml, {
     ALLOWED_ATTR: ALLOWED_ATTRIBUTES,
