@@ -141,6 +141,12 @@ Screenshot rules:
 - capture at 1440 x 900 or a matching 16:10 ratio;
 - use short benefit-led captions.
 
+The interface follows Material 3 patterns (segmented pill controls, soft
+elevated surfaces, page-like centered canvas) on the existing brand palette.
+It borrows layout conventions only: no Google fonts, logos, or product
+iconography ship in the bundle, so Marketplace trademark review sees a
+distinct product. Recapture the screenshot set after interface changes.
+
 ## Social and presentation copy
 
 ### 30-word pitch

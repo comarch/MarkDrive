@@ -65,6 +65,9 @@ interface AppHeaderProps {
   isCommentsOpen: boolean;
   openCommentsCount: number;
   onOpenSettings: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  zoom: number;
   onSignIn: () => void;
   onSignOut: () => void;
 }
@@ -97,6 +100,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   isCommentsOpen,
   openCommentsCount,
   onOpenSettings,
+  onZoomIn,
+  onZoomOut,
+  zoom,
   onSignIn,
   onSignOut,
 }) => {
@@ -238,38 +244,69 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </div>
       </div>
 
-      {/* Editing mode switch: direct edits or recorded suggestions */}
-      <div
-        className="hidden md:flex items-center rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 gap-0.5"
-        role="radiogroup"
-        aria-label="Editing mode"
-      >
-        <button
-          onClick={() => onChangeEditingMode("edit")}
-          title="Edit the document directly"
-          aria-pressed={editingMode === "edit"}
-          className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition ${
-            editingMode === "edit"
-              ? "bg-brand-600 text-white"
-              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-          }`}
+      {/* Mode switch and zoom, Workspace-style segmented controls */}
+      <div className="hidden md:flex items-center gap-2">
+        <div
+          className="flex items-center rounded-full bg-slate-100 dark:bg-slate-800 p-0.5 gap-0.5"
+          role="radiogroup"
+          aria-label="Editing mode"
         >
-          <PenLine className="w-3.5 h-3.5" />
-          <span>Edit</span>
-        </button>
-        <button
-          onClick={() => onChangeEditingMode("suggest")}
-          title="Record changes as suggestions for review"
-          aria-pressed={editingMode === "suggest"}
-          className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition ${
-            editingMode === "suggest"
-              ? "bg-amber-500 text-white"
-              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-          }`}
+          <button
+            onClick={() => onChangeEditingMode("edit")}
+            title="Edit the document directly"
+            aria-pressed={editingMode === "edit"}
+            className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition ${
+              editingMode === "edit"
+                ? "bg-brand-600 text-white shadow-xs"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+            }`}
+          >
+            <PenLine className="w-3.5 h-3.5" />
+            <span>Edit</span>
+          </button>
+          <button
+            onClick={() => onChangeEditingMode("suggest")}
+            title="Record changes as suggestions for review"
+            aria-pressed={editingMode === "suggest"}
+            className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition ${
+              editingMode === "suggest"
+                ? "bg-amber-500 text-white shadow-xs"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+            }`}
+          >
+            <FilePen className="w-3.5 h-3.5" />
+            <span>Suggest</span>
+          </button>
+        </div>
+
+        {/* Zoom controls for the editor and preview text */}
+        <div
+          className="flex items-center rounded-full bg-slate-100 dark:bg-slate-800 p-0.5 gap-0.5"
+          role="toolbar"
+          aria-label="Zoom"
         >
-          <FilePen className="w-3.5 h-3.5" />
-          <span>Suggest</span>
-        </button>
+          <button
+            onClick={onZoomOut}
+            title="Zoom out"
+            aria-label="Zoom out"
+            disabled={zoom <= 12}
+            className="px-2 py-1 rounded-full text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-40 transition"
+          >
+            A-
+          </button>
+          <span className="text-[10px] font-mono text-slate-400 min-w-[30px] text-center">
+            {zoom}px
+          </span>
+          <button
+            onClick={onZoomIn}
+            title="Zoom in"
+            aria-label="Zoom in"
+            disabled={zoom >= 22}
+            className="px-2 py-1 rounded-full text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-40 transition"
+          >
+            A+
+          </button>
+        </div>
       </div>
 
       {/* Right Actions Toolbar */}
