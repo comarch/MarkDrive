@@ -38,6 +38,16 @@ a.doc-link {
   text-decoration: underline dotted;
 }
 
+/* Folder-resolvable [[wikilinks]] */
+a.wikilink {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  color: inherit;
+}
+a.wikilink:hover {
+  filter: brightness(0.85);
+}
+
 /* GitHub-style callout blocks */
 .callout {
   border-left: 4px solid #94a3b8;

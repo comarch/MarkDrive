@@ -97,6 +97,7 @@ const ALLOWED_ATTRIBUTES = [
   "data-comment-id",
   "data-task-line",
   "data-doc-link",
+  "data-wikilink",
   "depth",
   "disabled",
   "display",
@@ -284,6 +285,42 @@ export function injectCommentHighlights(
 }
 
 /**
+ * Turns [[wikilinks]] into placeholder links outside code fences, so the
+ * preview can resolve them against the current Drive folder like relative
+ * document links. [[Name|Label]] renders Label pointing at Name.
+ */
+function renderWikiLinks(text: string): string {
+  const lines = text.split("\n");
+  let fence: string | null = null;
+
+  return lines
+    .map((line) => {
+      const trimmed = line.trimStart();
+      if (fence === null) {
+        if (/^(```|~~~)/.test(trimmed)) {
+          fence = trimmed.slice(0, 3);
+          return line;
+        }
+      } else {
+        if (trimmed.startsWith(fence)) fence = null;
+        return line;
+      }
+
+      return line.replace(
+        /\[\[([^\]|]{1,400})(?:\|([^\]]{0,400}))?\]\]/g,
+        (_match, name: string, label?: string) => {
+          const target = name.trim();
+          if (!target) return _match;
+          const text2 = (label ?? target).trim();
+          // The URI must carry no raw spaces, or the link syntax breaks.
+          return `[${text2}](wiki:${encodeURIComponent(target)})`;
+        },
+      );
+    })
+    .join("\n");
+}
+
+/**
  * Parses markdown source into rich HTML with math, diagrams, and comments
  */
 export function parseMarkdown(
@@ -292,7 +329,8 @@ export function parseMarkdown(
 ): string {
   // Frontmatter is metadata: hidden from the preview, kept in the source.
   const { body } = parseFrontmatter(markdownText);
-  const withMath = renderMathFormulas(body);
+  const withWikilinks = renderWikiLinks(body);
+  const withMath = renderMathFormulas(withWikilinks);
   const rawHtml = md.render(withMath);
   // Task checkboxes map back to source lines, so add the hidden block height.
   const taskLineOffset = frontmatterLineOffset(markdownText);
@@ -326,6 +364,18 @@ export function parseMarkdown(
   const withDocLinks = highlightedHtml.replace(
     docLinkPattern,
     (match, href: string) => {
+      // Wikilink placeholders become folder-resolvable links.
+      const wikilink = /^wiki:(.+)$/.exec(href);
+      if (wikilink?.[1] !== undefined) {
+        let name: string;
+        try {
+          name = decodeURIComponent(wikilink[1]);
+        } catch {
+          name = wikilink[1];
+        }
+        const escaped = md.utils.escapeHtml(name);
+        return `<a href="#wikilink" class="wikilink" data-wikilink="${escaped}"`;
+      }
       const isExternal =
         /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(href) ||
         href.startsWith("#") ||

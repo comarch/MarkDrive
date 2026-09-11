@@ -30,6 +30,7 @@ import { PropertiesPanel } from "./components/Editor/PropertiesPanel";
 import { TableToolbar } from "./components/Editor/TableToolbar";
 import { ReviewQueueModal } from "./components/Modals/ReviewQueueModal";
 import { TemplatesModal } from "./components/Modals/TemplatesModal";
+import { GraphModal } from "./components/Modals/GraphModal";
 import {
   expandTemplateVariables,
   type DocumentTemplate,
@@ -176,6 +177,8 @@ export const App: React.FC = () => {
   const [isReviewQueueOpen, setIsReviewQueueOpen] = useState(false);
   // Templates and snippets modal
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  // Folder link graph modal
+  const [isGraphOpen, setIsGraphOpen] = useState(false);
   // Passage deep link (#line=N), parsed once on mount.
   const [lineAnchor] = useState<number | null>(() => parseLineAnchorFromUrl());
   const lineAnchorAppliedRef = useRef(false);
@@ -555,13 +558,24 @@ export const App: React.FC = () => {
         );
         return;
       }
-      const cacheKey = `${folderId}/${name}`;
+      const cacheKey = `${folderId}/${name.toLowerCase()}`;
       let fileId: string | null | undefined =
         docLinkCacheRef.current.get(cacheKey);
       if (fileId === undefined) {
         try {
-          fileId = await driveService.findFileInFolder(name, folderId);
-          docLinkCacheRef.current.set(cacheKey, fileId);
+          // Wikilinks name documents without the .md extension.
+          const candidates = /\.(md|markdown)$/i.test(name)
+            ? [name]
+            : [name, `${name}.md`, `${name}.markdown`];
+          for (const candidate of candidates) {
+            const found = await driveService.findFileInFolder(
+              candidate,
+              folderId,
+            );
+            fileId = found;
+            if (fileId) break;
+          }
+          docLinkCacheRef.current.set(cacheKey, fileId ?? null);
         } catch (err) {
           console.error("Failed to resolve document link:", err);
           window.alert("Could not resolve the linked file. Check the folder.");
@@ -1044,6 +1058,7 @@ export const App: React.FC = () => {
         reviewStatus={reviewStatus}
         onOpenReviewQueue={() => setIsReviewQueueOpen(true)}
         onOpenTemplates={() => setIsTemplatesOpen(true)}
+        onOpenGraph={() => setIsGraphOpen(true)}
         user={user}
         fileMetadata={fileMetadata}
         isDark={isDark}
@@ -1277,6 +1292,16 @@ export const App: React.FC = () => {
         templatesFolderId={settings.templatesFolderId}
         onCreateFromTemplate={handleCreateFromTemplate}
         onInsertSnippet={handleInsertSnippet}
+      />
+
+      {/* Folder link graph and backlinks */}
+      <GraphModal
+        isOpen={isGraphOpen}
+        onClose={() => setIsGraphOpen(false)}
+        folderId={fileMetadata?.parents?.[0] ?? null}
+        currentFileId={fileMetadata?.id ?? null}
+        currentFileName={documentTitle}
+        onOpenFile={handleOpenFile}
       />
 
       {/* Save Conflict Resolution Modal */}
