@@ -1,8 +1,9 @@
 // Document drafts, titles, and settings may originate from Google Drive
 // responses, which are external input. Every browser-storage write passes
-// through this module so the stored payload stays inert plain text: control
-// characters are stripped and the size stays inside the storage quota.
-// Readers still treat stored values as untrusted content.
+// through this module so the stored payload stays inert: control characters
+// are stripped, the size stays inside the storage quota, and the text is
+// percent-encoded under a v2 marker (legacy raw entries still read back).
+// Readers keep treating stored values as untrusted content.
 
 const MAX_STORED_LENGTH = 2_000_000;
 
@@ -18,7 +19,10 @@ export function sanitizeStoredText(value: string): string {
 
 export function safeSetItem(key: string, value: string): void {
   try {
-    localStorage.setItem(key, `v2:${encodeURIComponent(sanitizeStoredText(value))}`);
+    localStorage.setItem(
+      key,
+      `v2:${encodeURIComponent(sanitizeStoredText(value))}`,
+    );
   } catch {
     // Quota exceeded or storage unavailable; in-memory state stays
     // authoritative and the next successful write retries.

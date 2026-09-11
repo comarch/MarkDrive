@@ -30,7 +30,17 @@ describe("safeSetItem / safeGetItem", () => {
   it("round-trips a sanitized value", () => {
     safeSetItem("key", "value\u0001");
     expect(safeGetItem("key")).toBe("value");
-    expect(localStorage.getItem("key")).toBe("value");
+    expect(localStorage.getItem("key")).toBe("v2:value");
+  });
+
+  it("round-trips markdown with spaces and percent signs", () => {
+    safeSetItem("key", "# 50% done\nnext step");
+    expect(safeGetItem("key")).toBe("# 50% done\nnext step");
+  });
+
+  it("reads legacy unversioned entries as raw text", () => {
+    localStorage.setItem("key", "# legacy draft");
+    expect(safeGetItem("key")).toBe("# legacy draft");
   });
 
   it("returns null for missing keys", () => {
