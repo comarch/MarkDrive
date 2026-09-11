@@ -102,6 +102,13 @@ uploads the image to the same Drive folder and inserts a Markdown image
 reference at the cursor. Image upload needs a signed-in session and edit access
 to the folder. In demo mode pasted images are not uploaded.
 
+### Edit tables
+
+Put the cursor inside a Markdown table and a context toolbar appears: add or
+remove rows and columns, align the column the cursor sits in, and sort by it.
+Pasting tab-separated content copied from Google Sheets or Excel inserts an
+aligned Markdown table instead of raw text.
+
 ### View modes
 
 | Mode         | Use it for                            |

@@ -27,6 +27,7 @@ import { ConflictModal } from "./components/Modals/ConflictModal";
 import { HistorySidebar } from "./components/Modals/HistorySidebar";
 import { FileBrowserModal } from "./components/Modals/FileBrowserModal";
 import { PropertiesPanel } from "./components/Editor/PropertiesPanel";
+import { TableToolbar } from "./components/Editor/TableToolbar";
 
 import { authService } from "./services/googleAuth";
 import { driveService } from "./services/googleDrive";
@@ -35,6 +36,8 @@ import { parseDriveStateFromUrl, updateUrlFileId } from "./services/driveState";
 import { SAMPLE_MARKDOWN } from "./utils/sampleDocument";
 import { toggleTaskLine } from "./utils/tasks";
 import { parseFrontmatter, updateFrontmatterField } from "./utils/frontmatter";
+import { applyTableAction, type TableAction } from "./utils/tableUtils";
+import type { TableCursorContext } from "./components/Editor/CodeMirrorEditor";
 
 import {
   DriveUser,
@@ -145,6 +148,11 @@ export const App: React.FC = () => {
 
   // Frontmatter properties panel
   const [isPropertiesOpen, setIsPropertiesOpen] = useState(false);
+
+  // Table context toolbar
+  const [tableContext, setTableContext] = useState<TableCursorContext | null>(
+    null,
+  );
 
   // Editor Selection & View Mode
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
@@ -683,6 +691,14 @@ export const App: React.FC = () => {
     [content],
   );
 
+  // Table context toolbar actions rewrite the table block around the cursor
+  const handleTableAction = (action: TableAction) => {
+    const updated = applyTableAction(content, tableContext?.line ?? 0, action);
+    if (updated !== content) {
+      handleContentChange(updated);
+    }
+  };
+
   const handleUpdateFrontmatterField = (key: string, value: string) => {
     const updated = updateFrontmatterField(content, key, value);
     if (updated !== content) {
@@ -800,6 +816,7 @@ export const App: React.FC = () => {
               onScroll={handleEditorScroll}
               onSelectionChange={setSelection}
               onImagePaste={handleImagePaste}
+              onTableCursorChange={setTableContext}
             />
 
             {/* Floating Add Comment tooltip */}
@@ -807,6 +824,14 @@ export const App: React.FC = () => {
               selection={selection}
               onAddComment={() => setIsNewCommentModalOpen(true)}
             />
+
+            {/* Table context toolbar while the cursor is inside a table */}
+            {tableContext && (
+              <TableToolbar
+                columnIndex={tableContext.column}
+                onAction={handleTableAction}
+              />
+            )}
           </div>
         )}
 

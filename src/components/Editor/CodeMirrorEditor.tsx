@@ -32,6 +32,12 @@ import {
 import { oneDark } from "@codemirror/theme-one-dark";
 import { SelectionInfo } from "../../types/editor";
 import { extractImageFiles } from "../../utils/clipboardFiles";
+import { tsvToMarkdownTable } from "../../utils/tableUtils";
+
+export interface TableCursorContext {
+  line: number;
+  column: number;
+}
 
 export interface CodeMirrorEditorHandle {
   insertText: (before: string, after?: string, defaultText?: string) => void;
@@ -41,6 +47,7 @@ export interface CodeMirrorEditorHandle {
   focus: () => void;
   scrollToLine: (lineNumber: number) => void;
   openSearch: () => void;
+  getTableContext: () => TableCursorContext | null;
 }
 
 interface CodeMirrorEditorProps {
@@ -51,6 +58,7 @@ interface CodeMirrorEditorProps {
   onScroll?: (percentage: number) => void;
   onSelectionChange?: (selection: SelectionInfo | null) => void;
   onImagePaste?: (files: File[]) => void;
+  onTableCursorChange?: (context: TableCursorContext | null) => void;
   commentedLines?: number[];
 }
 
@@ -67,6 +75,7 @@ export const CodeMirrorEditor = forwardRef<
       onScroll,
       onSelectionChange,
       onImagePaste,
+      onTableCursorChange,
     },
     ref,
   ) => {
@@ -79,6 +88,7 @@ export const CodeMirrorEditor = forwardRef<
       onScroll,
       onSelectionChange,
       onImagePaste,
+      onTableCursorChange,
     });
 
     valueRef.current = value;
@@ -87,6 +97,37 @@ export const CodeMirrorEditor = forwardRef<
       onScroll,
       onSelectionChange,
       onImagePaste,
+      onTableCursorChange,
+    };
+    // Last reported table context, so cursor moves do not spam callbacks.
+    const lastTableContextRef = useRef<TableCursorContext | null>(null);
+
+    // Reports the cursor's table position only when it changes.
+    const reportTableContext = (view: EditorView) => {
+      const { from } = view.state.selection.main;
+      const line = view.state.doc.lineAt(from);
+      if (!line.text.includes("|")) {
+        if (lastTableContextRef.current !== null) {
+          lastTableContextRef.current = null;
+          callbacksRef.current.onTableCursorChange?.(null);
+        }
+        return;
+      }
+      let pipesBefore = 0;
+      const cursorInLine = from - line.from;
+      for (let index = 0; index < cursorInLine; index += 1) {
+        if (line.text[index] === "|") pipesBefore += 1;
+      }
+      const hasLeadingPipe = line.text.trimStart().startsWith("|");
+      const context = {
+        line: line.number,
+        column: Math.max(0, pipesBefore - (hasLeadingPipe ? 1 : 0)),
+      };
+      const last = lastTableContextRef.current;
+      if (last?.line !== context.line || last?.column !== context.column) {
+        lastTableContextRef.current = context;
+        callbacksRef.current.onTableCursorChange?.(context);
+      }
     };
 
     // Expose methods to parent
@@ -172,6 +213,25 @@ export const CodeMirrorEditor = forwardRef<
         openSearchPanel(view);
         view.focus();
       },
+
+      getTableContext() {
+        const view = viewRef.current;
+        if (!view) return null;
+        const { from } = view.state.selection.main;
+        const line = view.state.doc.lineAt(from);
+        if (!line.text.includes("|")) return null;
+
+        // Column index equals the number of pipes before the cursor minus
+        // the leading pipe, when the row has one.
+        const cursorInLine = from - line.from;
+        let pipesBefore = 0;
+        for (let index = 0; index < cursorInLine; index += 1) {
+          if (line.text[index] === "|") pipesBefore += 1;
+        }
+        const hasLeadingPipe = line.text.trimStart().startsWith("|");
+        const column = Math.max(0, pipesBefore - (hasLeadingPipe ? 1 : 0));
+        return { line: line.number, column };
+      },
     }));
 
     // Initialize CodeMirror editor
@@ -242,10 +302,12 @@ export const CodeMirrorEditor = forwardRef<
                     ? { top: coords.top, left: coords.left }
                     : undefined,
                 });
+                reportTableContext(update.view);
                 return;
               }
             }
             callbacksRef.current.onSelectionChange?.(null);
+            reportTableContext(update.view);
           }
         }),
         EditorView.domEventHandlers({
@@ -257,12 +319,26 @@ export const CodeMirrorEditor = forwardRef<
               callbacksRef.current.onScroll?.(scroller.scrollTop / maxScroll);
             }
           },
-          paste(event) {
+          paste(event, view) {
             const clipboardEvent = event as ClipboardEvent;
             const data = clipboardEvent.clipboardData;
-            // Mixed text + image clipboards keep their text via the native
-            // paste; only pure image clips are intercepted for upload.
-            if (data?.getData("text/plain")) return false;
+            const text = data?.getData("text/plain");
+            if (text) {
+              // Tab-separated content from Sheets or Excel becomes a table.
+              const table = tsvToMarkdownTable(text);
+              if (table) {
+                const { from, to } = view.state.selection.main;
+                view.dispatch({
+                  changes: { from, to, insert: table },
+                  selection: { anchor: from + table.length },
+                });
+                return true;
+              }
+              // Other text keeps the native paste.
+              return false;
+            }
+            // Pure image clips are intercepted for upload; mixed text +
+            // image clipboards keep their text via the native paste.
             const images = extractImageFiles(Array.from(data?.files ?? []));
             if (images.length > 0 && callbacksRef.current.onImagePaste) {
               callbacksRef.current.onImagePaste(images);
@@ -309,16 +385,41 @@ export const CodeMirrorEditor = forwardRef<
       };
     }, [isDark, fontSize]); // Re-create if theme or font size changes
 
-    // Update document if value changed externally
+    // Update document if value changed externally. Only the differing middle
+    // is replaced, so cursors and undo history outside the change survive.
     useEffect(() => {
       const view = viewRef.current;
       if (!view) return;
       const currentDoc = view.state.doc.toString();
-      if (value !== currentDoc) {
-        view.dispatch({
-          changes: { from: 0, to: currentDoc.length, insert: value },
-        });
+      if (value === currentDoc) return;
+
+      let start = 0;
+      const oldEnd = currentDoc.length;
+      const newEnd = value.length;
+      while (
+        start < oldEnd &&
+        start < newEnd &&
+        currentDoc[start] === value[start]
+      ) {
+        start += 1;
       }
+      let tailOld = oldEnd;
+      let tailNew = newEnd;
+      while (
+        tailOld > start &&
+        tailNew > start &&
+        currentDoc[tailOld - 1] === value[tailNew - 1]
+      ) {
+        tailOld -= 1;
+        tailNew -= 1;
+      }
+      view.dispatch({
+        changes: {
+          from: start,
+          to: tailOld,
+          insert: value.slice(start, tailNew),
+        },
+      });
     }, [value]);
 
     return (
