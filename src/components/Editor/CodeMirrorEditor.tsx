@@ -22,6 +22,7 @@ import {
   highlightSelectionMatches,
   openSearchPanel,
 } from "@codemirror/search";
+import { linter } from "@codemirror/lint";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import {
@@ -33,6 +34,25 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { SelectionInfo } from "../../types/editor";
 import { extractImageFiles } from "../../utils/clipboardFiles";
 import { tsvToMarkdownTable } from "../../utils/tableUtils";
+import { lintLinks, lintMarkdown } from "../../services/lint";
+
+// Quality checks run as native editor diagnostics; the delay keeps
+// typing responsive.
+const qualityLinter = linter((view) => {
+  const text = view.state.doc.toString();
+  const diagnostics = [...lintMarkdown(text), ...lintLinks(text)];
+  const lineCount = view.state.doc.lines;
+  return diagnostics.map((diagnostic) => {
+    const lineNumber = Math.min(Math.max(1, diagnostic.line), lineCount);
+    const line = view.state.doc.line(lineNumber);
+    return {
+      from: line.from,
+      to: line.to,
+      severity: diagnostic.severity,
+      message: `${diagnostic.message} (${diagnostic.rule})`,
+    };
+  });
+});
 
 export interface TableCursorContext {
   line: number;
@@ -269,6 +289,10 @@ export const CodeMirrorEditor = forwardRef<
         highlightActiveLine(),
         highlightSelectionMatches(),
         search({ top: true }),
+        qualityLinter,
+        // Browser spell checking (including Polish when the browser has
+        // the dictionary) applies to the editable text.
+        EditorView.contentAttributes.of({ spellcheck: "true" }),
         EditorView.lineWrapping,
         markdown({
           base: markdownLanguage,
