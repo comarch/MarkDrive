@@ -1089,9 +1089,14 @@ export const App: React.FC = () => {
           selectedId={historySelectedId}
           selectedContent={historySelectedContent}
           currentContent={content}
+          comments={comments}
           onSelect={handleSelectRevision}
           onRestore={handleRestoreRevision}
           onRefresh={() => fileMetadata && loadHistory(fileMetadata.id)}
+          onSelectComment={(commentId) => {
+            setIsCommentsOpen(true);
+            setSelectedCommentId(commentId);
+          }}
         />
       </div>
 

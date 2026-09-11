@@ -1,7 +1,12 @@
 import React, { useMemo } from "react";
-import { X, History, RotateCcw, RefreshCw } from "lucide-react";
-import { DriveRevision } from "../../types/drive";
+import { X, History, RotateCcw, RefreshCw, MessageSquare } from "lucide-react";
+import { DriveComment, DriveRevision } from "../../types/drive";
 import { diffLines } from "../../utils/diffMerge";
+import {
+  collectDiffHunks,
+  commentSummary,
+  matchCommentsToHunks,
+} from "../../utils/diff";
 
 interface HistorySidebarProps {
   isOpen: boolean;
@@ -12,9 +17,11 @@ interface HistorySidebarProps {
   selectedId: string | null;
   selectedContent: string | null;
   currentContent: string;
+  comments: DriveComment[];
   onSelect: (revisionId: string) => void;
   onRestore: (revisionId: string) => void;
   onRefresh: () => void;
+  onSelectComment?: (commentId: string) => void;
 }
 
 function formatRevisionTime(iso?: string): string {
@@ -39,9 +46,11 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
   selectedId,
   selectedContent,
   currentContent,
+  comments,
   onSelect,
   onRestore,
   onRefresh,
+  onSelectComment,
 }) => {
   const diffRows = useMemo(() => {
     if (selectedContent === null) return [];
@@ -58,6 +67,14 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
 
   const addedCount = diffRows.filter((row) => row.type === "added").length;
   const removedCount = diffRows.filter((row) => row.type === "removed").length;
+
+  // Discussion attached to the changed regions, plus drifted anchors.
+  const discussion = useMemo(() => {
+    if (selectedContent === null || comments.length === 0) {
+      return { matched: [], unmatched: [] };
+    }
+    return matchCommentsToHunks(comments, collectDiffHunks(diffRows));
+  }, [selectedContent, comments, diffRows]);
 
   if (!isOpen) return null;
 
@@ -191,6 +208,84 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                 })
               )}
             </div>
+
+            {/* Discussion attached to the changed regions */}
+            {(discussion.matched.length > 0 ||
+              discussion.unmatched.length > 0) && (
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Discussion on these changes</span>
+                </div>
+
+                {discussion.matched.map(({ hunk, comments: hunkComments }) => (
+                  <div
+                    key={`${hunk.startLine}-${hunk.endLine}`}
+                    className="rounded-lg border border-slate-200 dark:border-slate-800 p-2 space-y-1"
+                  >
+                    <div className="text-[10px] text-slate-400">
+                      Lines {hunk.startLine}-{hunk.endLine} (+
+                      {hunk.addedCount} / -{hunk.removedCount})
+                    </div>
+                    {hunkComments.map((comment) => {
+                      const summary = commentSummary(comment);
+                      return (
+                        <button
+                          key={comment.id}
+                          onClick={() => onSelectComment?.(comment.id)}
+                          className="w-full text-left px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+                              {summary.author}
+                            </span>
+                            {summary.resolved && (
+                              <span className="text-[9px] text-emerald-600">
+                                resolved
+                              </span>
+                            )}
+                            {summary.replyCount > 0 && (
+                              <span className="text-[9px] text-slate-400">
+                                {summary.replyCount} repl
+                                {summary.replyCount === 1 ? "y" : "ies"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2">
+                            {summary.excerpt}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+
+                {discussion.unmatched.length > 0 && (
+                  <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-2 space-y-1">
+                    <div className="text-[10px] text-slate-400">
+                      Nearby discussion (anchor no longer inside a change)
+                    </div>
+                    {discussion.unmatched.map((comment) => {
+                      const summary = commentSummary(comment);
+                      return (
+                        <button
+                          key={comment.id}
+                          onClick={() => onSelectComment?.(comment.id)}
+                          className="w-full text-left px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                        >
+                          <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+                            {summary.author}
+                          </span>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2">
+                            {summary.excerpt}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
