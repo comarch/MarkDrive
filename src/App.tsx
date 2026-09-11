@@ -88,6 +88,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   syncScroll: true,
   templatesFolderId: "",
   language: "en",
+  richView: false,
 };
 
 const LOCAL_STORAGE_CONTENT_KEY = "gdrive_md_last_content";
@@ -108,6 +109,7 @@ const toPersistableSettings = (
   syncScroll: value.syncScroll,
   templatesFolderId: value.templatesFolderId,
   language: value.language,
+  richView: value.richView,
 });
 
 export const App: React.FC = () => {
@@ -1178,6 +1180,10 @@ export const App: React.FC = () => {
         onOpenFileBrowser={handleOpenFileBrowser}
         onOpenExportModal={() => setIsExportOpen(true)}
         onToggleOutline={() => setIsOutlineOpen(!isOutlineOpen)}
+        richView={settings.richView}
+        onToggleRichView={() =>
+          setSettings((prev) => ({ ...prev, richView: !prev.richView }))
+        }
         isOutlineOpen={isOutlineOpen}
         onOpenHistory={handleOpenHistory}
         isHistoryOpen={isHistoryOpen}
@@ -1272,6 +1278,7 @@ export const App: React.FC = () => {
               onChange={handleContentChange}
               isDark={isDark}
               fontSize={settings.fontSize}
+              richView={settings.richView}
               onScroll={handleEditorScroll}
               onSelectionChange={setSelection}
               onImagePaste={handleImagePaste}

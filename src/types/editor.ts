@@ -28,4 +28,6 @@ export interface AppSettings {
   templatesFolderId: string;
   /** Interface language for the shell strings. */
   language: "en" | "pl";
+  /** WYSIWYG overlay hiding raw Markdown marks in the editor. */
+  richView: boolean;
 }
