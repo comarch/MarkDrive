@@ -26,4 +26,6 @@ export interface AppSettings {
   syncScroll: boolean;
   /** Drive folder id holding organization templates; empty disables. */
   templatesFolderId: string;
+  /** Interface language for the shell strings. */
+  language: "en" | "pl";
 }

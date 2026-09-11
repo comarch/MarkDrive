@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { X, Settings, Key, Save, HelpCircle } from "lucide-react";
 import { AppSettings } from "../../types/editor";
+import { t } from "../../i18n";
+
+type UiLanguage = "en" | "pl";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -24,6 +27,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [templatesFolderId, setTemplatesFolderId] = useState(
     settings.templatesFolderId,
   );
+  const initialLanguage: UiLanguage = settings.language === "pl" ? "pl" : "en";
+  const [language, setLanguage] = useState(initialLanguage);
 
   if (!isOpen) return null;
 
@@ -36,6 +41,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       fontSize,
       syncScroll,
       templatesFolderId: templatesFolderId.trim(),
+      language,
     });
     onClose();
   };
@@ -145,6 +151,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 shows only the built-in templates.
               </span>
             </div>
+          </div>
+
+          <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+          {/* Interface language */}
+          <div>
+            <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 block mb-1.5">
+              {t("settings.language")}
+            </label>
+            <select
+              value={language}
+              onChange={(e) =>
+                setLanguage(e.target.value === "pl" ? "pl" : "en")
+              }
+              aria-label={t("settings.language")}
+              className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            >
+              <option value="en">English</option>
+              <option value="pl">Polski</option>
+            </select>
           </div>
 
           <div className="h-px bg-slate-100 dark:bg-slate-800" />
