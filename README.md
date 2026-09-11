@@ -153,19 +153,22 @@ teams use them.
 MarkQuire does not try to replace every Markdown tool. It is focused on a
 specific gap: Markdown-first work inside a Google Drive-centered organization.
 
-| Alternative                                                | Typical strength                                    | MarkQuire focus                                                  |
-| ---------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------- |
-| [StackEdit](https://stackedit.io/)                         | Browser editing and synchronization across services | Opinionated Drive file lifecycle plus Drive-backed review        |
-| [HackMD](https://hackmd.io/)                               | Hosted real-time collaborative writing              | Drive-owned source files and organization-controlled deployment  |
-| [Typora](https://typora.io/)                               | Polished local desktop writing                      | Browser access, Drive entry points, and team review threads      |
-| [Obsidian](https://obsidian.md/)                           | Linked local knowledge bases and personal workflows | Review of individual Drive files with non-technical stakeholders |
-| [Google Docs](https://workspace.google.com/products/docs/) | Familiar rich-text collaboration                    | Portable Markdown source with technical rendering                |
+| Alternative                                                | Typical strength                                    | MarkQuire focus                                                  | Pricing                                         |
+| ---------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------- |
+| [StackEdit](https://stackedit.io/)                         | Browser editing and synchronization across services | Opinionated Drive file lifecycle plus Drive-backed review        | Free, open source                               |
+| [HackMD](https://hackmd.io/)                               | Hosted real-time collaborative writing              | Drive-owned source files and organization-controlled deployment  | Free tier; paid team and enterprise plans       |
+| [Typora](https://typora.io/)                               | Polished local desktop writing                      | Browser access, Drive entry points, and team review threads      | Paid one-time license                           |
+| [Obsidian](https://obsidian.md/)                           | Linked local knowledge bases and personal workflows | Review of individual Drive files with non-technical stakeholders | Free for personal use; paid commercial and sync |
+| [Google Docs](https://workspace.google.com/products/docs/) | Familiar rich-text collaboration                    | Portable Markdown source with technical rendering                | Free with a Google account; Workspace per user  |
+
+MarkQuire itself is free and open source under MIT. Teams pay only for the
+Google Workspace licenses they already hold, and the optional companion runs
+inside their own infrastructure.
 
 Choose MarkQuire when Google Drive is already the system of record and Markdown
 must remain the final file format.
 
-Comparison reflects public product information checked in September 2026.
-Products and plans can change.
+Comparison and pricing reflect public product information checked in September 2026. Products and plans can change.
 
 ## Try it locally
 
