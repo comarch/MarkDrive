@@ -19,8 +19,13 @@ import {
   ExternalLink,
   PenLine,
   FilePen,
+  ListChecks,
 } from "lucide-react";
 import { DriveUser, SaveStatus, DriveFileMetadata } from "../../types/drive";
+import {
+  reviewStatusLabel,
+  reviewStatusClasses,
+} from "../../utils/reviewStatus";
 
 export type EditingMode = "edit" | "suggest";
 
@@ -35,6 +40,8 @@ interface AppHeaderProps {
   saveStatus: SaveStatus;
   editingMode: EditingMode;
   onChangeEditingMode: (mode: EditingMode) => void;
+  reviewStatus: string | null;
+  onOpenReviewQueue?: () => void;
   user: DriveUser | null;
   fileMetadata: DriveFileMetadata | null;
   isDark: boolean;
@@ -62,6 +69,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   saveStatus,
   editingMode,
   onChangeEditingMode,
+  reviewStatus,
+  onOpenReviewQueue,
   user,
   fileMetadata,
   isDark,
@@ -164,6 +173,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               className="text-sm font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 px-2 py-1 rounded cursor-pointer transition max-w-[200px] sm:max-w-xs md:max-w-md truncate"
             >
               {documentTitle}
+            </span>
+          )}
+
+          {/* Review status pill from the frontmatter field */}
+          {reviewStatus && (
+            <span
+              title={`Review status: ${reviewStatusLabel(reviewStatus)}`}
+              className={`hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${reviewStatusClasses(reviewStatus)}`}
+            >
+              {reviewStatusLabel(reviewStatus)}
             </span>
           )}
 
@@ -299,6 +318,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         >
           <ListTree className="w-4 h-4" />
         </button>
+
+        {/* Review queue button */}
+        {onOpenReviewQueue && (
+          <button
+            onClick={onOpenReviewQueue}
+            title="Documents awaiting review"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+          >
+            <ListChecks className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Drive version history button */}
         {onOpenHistory && (

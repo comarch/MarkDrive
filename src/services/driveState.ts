@@ -109,6 +109,35 @@ export function parseDriveStateFromUrl(
 }
 
 /**
+ * Reads a passage deep link from the URL hash: #line=12 opens the
+ * document scrolled to that line. Returns null for anything else.
+ */
+export function parseLineAnchorFromUrl(customHash?: string): number | null {
+  const hash =
+    customHash ?? (typeof window === "undefined" ? "" : window.location.hash);
+  const match = /^#line=(\d{1,7})$/.exec(hash);
+  if (!match) return null;
+  const line = Number.parseInt(match[1] ?? "0", 10);
+  return Number.isFinite(line) && line > 0 ? line : null;
+}
+
+/**
+ * Builds a shareable passage link for the given file and line.
+ */
+export function buildPassageLink(fileId: string | null, line: number): string {
+  if (typeof window === "undefined") return `#line=${line}`;
+  const url = new URL(window.location.href);
+  url.hash = `line=${line}`;
+  url.searchParams.delete("state");
+  if (fileId) {
+    url.searchParams.set("fileId", fileId);
+  } else {
+    url.searchParams.delete("fileId");
+  }
+  return url.toString();
+}
+
+/**
  * Updates URL parameters without page reload
  */
 export function updateUrlFileId(fileId: string | null) {
