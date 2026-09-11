@@ -70,6 +70,7 @@ import {
   parseLineAnchorFromUrl,
 } from "./services/driveState";
 import { SAMPLE_MARKDOWN } from "./utils/sampleDocument";
+import { safeGetItem, safeSetItem } from "./utils/safeStorage";
 import { toggleTaskLine } from "./utils/tasks";
 import { parseFrontmatter, updateFrontmatterField } from "./utils/frontmatter";
 import { REVIEW_STATUS_FIELD } from "./utils/reviewStatus";
@@ -213,7 +214,7 @@ export const App: React.FC = () => {
   // Application Settings
   const [settings, setSettings] = useState<AppSettings>(() => {
     try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_SETTINGS_KEY);
+      const stored = safeGetItem(LOCAL_STORAGE_SETTINGS_KEY);
       if (!stored) return DEFAULT_SETTINGS;
       const parsed = JSON.parse(stored) as Partial<AppSettings>;
       // The AI block merges field by field so older stored settings
@@ -239,10 +240,10 @@ export const App: React.FC = () => {
 
   // Document State
   const [documentTitle, setDocumentTitle] = useState<string>(() => {
-    return localStorage.getItem(LOCAL_STORAGE_TITLE_KEY) || "Welcome.md";
+    return safeGetItem(LOCAL_STORAGE_TITLE_KEY) || "Welcome.md";
   });
   const [content, setContent] = useState<string>(() => {
-    return localStorage.getItem(LOCAL_STORAGE_CONTENT_KEY) || SAMPLE_MARKDOWN;
+    return safeGetItem(LOCAL_STORAGE_CONTENT_KEY) || SAMPLE_MARKDOWN;
   });
   const [fileMetadata, setFileMetadata] = useState<DriveFileMetadata | null>(
     null,
@@ -819,7 +820,7 @@ export const App: React.FC = () => {
         );
         setFileMetadata((prev) => (prev ? { ...prev, ...updated } : updated));
         setContent(resolvedContent);
-        localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, resolvedContent);
+        safeSetItem(LOCAL_STORAGE_CONTENT_KEY, resolvedContent);
         setLastSyncedContent(resolvedContent);
         setSaveStatus("saved");
       } catch (err) {
@@ -1186,7 +1187,7 @@ export const App: React.FC = () => {
   const handleTitleChange = async (newTitle: string) => {
     const formatted = newTitle.endsWith(".md") ? newTitle : `${newTitle}.md`;
     setDocumentTitle(formatted);
-    localStorage.setItem(LOCAL_STORAGE_TITLE_KEY, formatted);
+    safeSetItem(LOCAL_STORAGE_TITLE_KEY, formatted);
 
     if (fileMetadata) {
       try {
@@ -1908,7 +1909,7 @@ export const App: React.FC = () => {
         onSaveSettings={(newSettings) => {
           setSettings(newSettings);
           authService.setClientId(newSettings.googleClientId);
-          localStorage.setItem(
+          safeSetItem(
             LOCAL_STORAGE_SETTINGS_KEY,
             JSON.stringify(toPersistableSettings(newSettings)),
           );

@@ -1,12 +1,13 @@
 import { DriveComment, DriveReply } from "../types/drive";
 import { authService } from "./googleAuth";
+import { safeGetItem, safeSetItem } from "../utils/safeStorage";
 
 const DRIVE_API_BASE = "https://www.googleapis.com/drive/v3";
 const MOCK_COMMENTS_KEY = "gdrive_mock_comments";
 
 function getMockCommentsStorage(): Record<string, DriveComment[]> {
   try {
-    const raw = localStorage.getItem(MOCK_COMMENTS_KEY);
+    const raw = safeGetItem(MOCK_COMMENTS_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -14,7 +15,7 @@ function getMockCommentsStorage(): Record<string, DriveComment[]> {
 }
 
 function saveMockCommentsStorage(store: Record<string, DriveComment[]>): void {
-  localStorage.setItem(MOCK_COMMENTS_KEY, JSON.stringify(store));
+  safeSetItem(MOCK_COMMENTS_KEY, JSON.stringify(store));
 }
 
 export class GoogleCommentsService {

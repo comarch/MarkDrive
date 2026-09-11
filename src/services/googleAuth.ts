@@ -1,4 +1,5 @@
 import { DriveUser } from "../types/drive";
+import { safeGetItem, safeSetItem } from "../utils/safeStorage";
 
 // Default / stored OAuth configuration
 const STORAGE_CLIENT_ID_KEY = "gdrive_client_id";
@@ -60,7 +61,7 @@ export class GoogleAuthService {
 
   public getClientId(): string {
     return (
-      localStorage.getItem(STORAGE_CLIENT_ID_KEY) ||
+      safeGetItem(STORAGE_CLIENT_ID_KEY) ||
       (import.meta as unknown as { env: { VITE_GOOGLE_CLIENT_ID?: string } })
         .env.VITE_GOOGLE_CLIENT_ID ||
       ""
@@ -68,7 +69,7 @@ export class GoogleAuthService {
   }
 
   public setClientId(clientId: string): void {
-    localStorage.setItem(STORAGE_CLIENT_ID_KEY, clientId.trim());
+    safeSetItem(STORAGE_CLIENT_ID_KEY, clientId.trim());
     this.tokenClient = null; // force re-init
   }
 
