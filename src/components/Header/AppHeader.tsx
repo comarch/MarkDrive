@@ -22,6 +22,7 @@ import {
   ListChecks,
   LayoutTemplate,
   Network,
+  Presentation,
 } from "lucide-react";
 import { DriveUser, SaveStatus, DriveFileMetadata } from "../../types/drive";
 import {
@@ -46,6 +47,7 @@ interface AppHeaderProps {
   onOpenReviewQueue?: () => void;
   onOpenTemplates?: () => void;
   onOpenGraph?: () => void;
+  onPresent?: () => void;
   user: DriveUser | null;
   fileMetadata: DriveFileMetadata | null;
   isDark: boolean;
@@ -77,6 +79,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenReviewQueue,
   onOpenTemplates,
   onOpenGraph,
+  onPresent,
   user,
   fileMetadata,
   isDark,
@@ -300,6 +303,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <Save className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Save</span>
         </button>
+
+        {/* Presentation mode button */}
+        {onPresent && (
+          <button
+            onClick={onPresent}
+            title="Present as slides"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+          >
+            <Presentation className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Export button */}
         <button
