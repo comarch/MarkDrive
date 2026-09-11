@@ -29,6 +29,11 @@ import { FileBrowserModal } from "./components/Modals/FileBrowserModal";
 import { PropertiesPanel } from "./components/Editor/PropertiesPanel";
 import { TableToolbar } from "./components/Editor/TableToolbar";
 import { ReviewQueueModal } from "./components/Modals/ReviewQueueModal";
+import { TemplatesModal } from "./components/Modals/TemplatesModal";
+import {
+  expandTemplateVariables,
+  type DocumentTemplate,
+} from "./services/templates";
 
 import { authService } from "./services/googleAuth";
 import { driveService } from "./services/googleDrive";
@@ -71,6 +76,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: "system",
   fontSize: 14,
   syncScroll: true,
+  templatesFolderId: "",
 };
 
 const LOCAL_STORAGE_CONTENT_KEY = "gdrive_md_last_content";
@@ -163,6 +169,8 @@ export const App: React.FC = () => {
 
   // Review workflow: queue modal and passage deep link anchor
   const [isReviewQueueOpen, setIsReviewQueueOpen] = useState(false);
+  // Templates and snippets modal
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   // Passage deep link (#line=N), parsed once on mount.
   const [lineAnchor] = useState<number | null>(() => parseLineAnchorFromUrl());
   const lineAnchorAppliedRef = useRef(false);
@@ -765,6 +773,61 @@ export const App: React.FC = () => {
     }
   };
 
+  // Create a new document from a template, expanding its variables
+  const handleCreateFromTemplate = async (template: DocumentTemplate) => {
+    if (saveStatus === "unsaved") {
+      const confirmNew = window.confirm(
+        "You have unsaved changes. Create a new document anyway?",
+      );
+      if (!confirmNew) return;
+    }
+    exitSuggestModeSilently();
+
+    let templateContent = template.content;
+    if (template.fileId) {
+      // Organization templates fetch their content from Drive on use.
+      const result = await driveService.getFile(template.fileId);
+      templateContent = result.content;
+    }
+
+    const variables = {
+      date: new Date().toISOString().slice(0, 10),
+      author: user?.displayName || "Unknown author",
+      title: documentTitle.replace(/\.md$/i, ""),
+    };
+    const expanded = expandTemplateVariables(templateContent, variables);
+
+    try {
+      setSaveStatus("saving");
+      const fileName = `${template.name}.md`.replace(/\s+/g, " ").trim();
+      const newFile = await driveService.createFile(fileName, expanded);
+      setFileMetadata(newFile);
+      setDocumentTitle(newFile.name);
+      setContent(expanded);
+      lastSyncedContentRef.current = expanded;
+      localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, expanded);
+      setSaveStatus("saved");
+      updateUrlFileId(newFile.id);
+      setSelectedCommentId(null);
+      setComments([]);
+      await loadComments(newFile.id);
+    } catch (err) {
+      console.error("Failed to create file from template:", err);
+      setSaveStatus("error");
+      throw err;
+    }
+  };
+
+  // Insert a snippet at the cursor with variables expanded
+  const handleInsertSnippet = (snippetContent: string) => {
+    const expanded = expandTemplateVariables(snippetContent, {
+      date: new Date().toISOString().slice(0, 10),
+      author: user?.displayName || "Unknown author",
+      title: documentTitle.replace(/\.md$/i, ""),
+    });
+    editorRef.current?.insertBlock(expanded);
+  };
+
   // Comments Handlers
   const handleCreateComment = async (
     commentText: string,
@@ -949,6 +1012,7 @@ export const App: React.FC = () => {
         onChangeEditingMode={handleEditingModeChange}
         reviewStatus={reviewStatus}
         onOpenReviewQueue={() => setIsReviewQueueOpen(true)}
+        onOpenTemplates={() => setIsTemplatesOpen(true)}
         user={user}
         fileMetadata={fileMetadata}
         isDark={isDark}
@@ -1169,6 +1233,15 @@ export const App: React.FC = () => {
         isOpen={isReviewQueueOpen}
         onClose={() => setIsReviewQueueOpen(false)}
         onOpenFile={handleOpenFile}
+      />
+
+      {/* Templates and snippets */}
+      <TemplatesModal
+        isOpen={isTemplatesOpen}
+        onClose={() => setIsTemplatesOpen(false)}
+        templatesFolderId={settings.templatesFolderId}
+        onCreateFromTemplate={handleCreateFromTemplate}
+        onInsertSnippet={handleInsertSnippet}
       />
 
       {/* Save Conflict Resolution Modal */}

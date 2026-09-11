@@ -321,6 +321,45 @@ export class GoogleDriveService {
   }
 
   /**
+   * Lists Markdown files inside a specific Drive folder, for example the
+   * configured organization template folder.
+   */
+  public async listMarkdownFilesInFolder(
+    folderId: string,
+  ): Promise<DriveFileMetadata[]> {
+    const token = authService.getAccessToken();
+
+    if (!token || token.startsWith("mock_google_token_")) {
+      const store = getMockStorage();
+      return Object.values(store)
+        .filter(
+          (entry) =>
+            entry.metadata.parents?.includes(folderId) &&
+            (entry.metadata.mimeType === "text/markdown" ||
+              /\.(md|markdown)$/i.test(entry.metadata.name)),
+        )
+        .map((entry) => entry.metadata);
+    }
+
+    const query = encodeURIComponent(
+      `'${folderId}' in parents and (mimeType = 'text/markdown' or name contains '.md' or name contains '.markdown')`,
+    );
+    const res = await fetch(
+      `${DRIVE_API_BASE}/files?q=${query}&orderBy=name&pageSize=50&fields=files(id,name,mimeType,modifiedTime,webViewLink,parents,capabilities,headRevisionId)`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(`Failed to list folder files: ${res.statusText}`);
+    }
+
+    const data = (await res.json()) as { files?: DriveFileMetadata[] };
+    return data.files ?? [];
+  }
+
+  /**
    * Finds a file by exact name inside a Drive folder.
    *
    * Returns null when nothing matches, so callers can show a clear reason.

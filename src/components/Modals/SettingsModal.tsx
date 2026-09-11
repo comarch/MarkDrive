@@ -21,6 +21,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
   const [fontSize, setFontSize] = useState(settings.fontSize);
   const [syncScroll, setSyncScroll] = useState(settings.syncScroll);
+  const [templatesFolderId, setTemplatesFolderId] = useState(
+    settings.templatesFolderId,
+  );
 
   if (!isOpen) return null;
 
@@ -32,6 +35,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       autoSaveIntervalMs: autoSaveInterval,
       fontSize,
       syncScroll,
+      templatesFolderId: templatesFolderId.trim(),
     });
     onClose();
   };
@@ -117,6 +121,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="w-full accent-brand-600"
             />
           </div>
+
+          {/* Organization templates folder */}
+          <div>
+            <label
+              htmlFor="templates-folder-id"
+              className="text-xs font-semibold text-slate-800 dark:text-slate-200 block mb-1.5"
+            >
+              Organization Templates Folder ID
+            </label>
+            <input
+              id="templates-folder-id"
+              type="text"
+              value={templatesFolderId}
+              onChange={(e) => setTemplatesFolderId(e.target.value)}
+              placeholder="Drive folder id with approved templates"
+              className="w-full text-xs font-mono p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+            <div className="mt-1.5 flex items-start gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+              <HelpCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
+              <span>
+                Markdown files in this Drive folder appear as templates. Empty
+                shows only the built-in templates.
+              </span>
+            </div>
+          </div>
+
+          <div className="h-px bg-slate-100 dark:bg-slate-800" />
 
           {/* Sync Scrolling */}
           <div className="flex items-center justify-between">

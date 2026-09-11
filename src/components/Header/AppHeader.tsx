@@ -20,6 +20,7 @@ import {
   PenLine,
   FilePen,
   ListChecks,
+  LayoutTemplate,
 } from "lucide-react";
 import { DriveUser, SaveStatus, DriveFileMetadata } from "../../types/drive";
 import {
@@ -42,6 +43,7 @@ interface AppHeaderProps {
   onChangeEditingMode: (mode: EditingMode) => void;
   reviewStatus: string | null;
   onOpenReviewQueue?: () => void;
+  onOpenTemplates?: () => void;
   user: DriveUser | null;
   fileMetadata: DriveFileMetadata | null;
   isDark: boolean;
@@ -71,6 +73,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onChangeEditingMode,
   reviewStatus,
   onOpenReviewQueue,
+  onOpenTemplates,
   user,
   fileMetadata,
   isDark,
@@ -318,6 +321,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         >
           <ListTree className="w-4 h-4" />
         </button>
+
+        {/* Templates and snippets button */}
+        {onOpenTemplates && (
+          <button
+            onClick={onOpenTemplates}
+            title="Templates and snippets"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+          >
+            <LayoutTemplate className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Review queue button */}
         {onOpenReviewQueue && (
