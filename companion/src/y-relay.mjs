@@ -144,7 +144,7 @@ export const setupWSConnection = (
     doc.awareness?.off("update", awarenessListener);
     const roomClients = state.connections.get(room);
     roomClients?.delete(ws);
-    if (roomClients && roomClients.size === 0) {
+    if (roomClients?.size === 0) {
       state.connections.delete(room);
       // Last peer out: tear the room down instead of holding the
       // document and its awareness timers in memory.

@@ -6,39 +6,44 @@
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 
+// Restores previously indexed documents from the JSONL persistence
+// file; unreadable or malformed content yields an empty index.
+const loadPersistedIndex = (persistPath) => {
+  const documents = new Map();
+  if (!persistPath || !existsSync(persistPath)) return documents;
+  try {
+    for (const line of readFileSync(persistPath, "utf8").split("\n")) {
+      const trimmed = line.trim();
+      if (trimmed.length === 0) continue;
+      try {
+        const entry = JSON.parse(trimmed);
+        if (
+          entry?.fileId &&
+          typeof entry.name === "string" &&
+          entry.termCounts &&
+          typeof entry.termCounts === "object"
+        ) {
+          documents.set(entry.fileId, entry);
+        }
+      } catch {
+        // Skip malformed lines.
+      }
+    }
+  } catch {
+    // Start fresh on unreadable indexes.
+  }
+  return documents;
+};
+
 export const createSearchIndex = (persistPath = "") => {
   // fileId -> { fileId, name, nameTerms, terms, termCounts, updatedAt }
-  const documents = new Map();
+  const documents = loadPersistedIndex(persistPath);
 
   const tokenize = (text) =>
     text
       .toLowerCase()
       .split(/[^a-z0-9\u00c0-\u024f]+/)
       .filter((term) => term.length > 1);
-
-  if (persistPath && existsSync(persistPath)) {
-    try {
-      for (const line of readFileSync(persistPath, "utf8").split("\n")) {
-        const trimmed = line.trim();
-        if (trimmed.length === 0) continue;
-        try {
-          const entry = JSON.parse(trimmed);
-          if (
-            entry?.fileId &&
-            typeof entry.name === "string" &&
-            entry.termCounts &&
-            typeof entry.termCounts === "object"
-          ) {
-            documents.set(entry.fileId, entry);
-          }
-        } catch {
-          // Skip malformed lines.
-        }
-      }
-    } catch {
-      // Start fresh on unreadable indexes.
-    }
-  }
 
   const persist = () => {
     if (!persistPath) return;

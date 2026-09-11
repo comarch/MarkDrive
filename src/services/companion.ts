@@ -9,7 +9,20 @@ export interface CompanionSearchHit {
   snippet: string;
 }
 
-const baseUrl = (companionUrl: string) => companionUrl.replace(/\/$/, "");
+/**
+ * Validates the configured companion URL before any request: only
+ * well-formed http(s) URLs pass, so a mangled setting can never turn
+ * into a request to an unexpected scheme or host.
+ */
+const safeBaseUrl = (companionUrl: string): string | null => {
+  try {
+    const url = new URL(companionUrl);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return null;
+  }
+};
 
 const jsonFetch = async <T>(
   url: string,
@@ -29,33 +42,39 @@ export const registerDriveWatch = (
   companionUrl: string,
   fileId: string,
   accessToken: string,
-): Promise<{ channelId: string; expiresAt: string } | null> =>
-  jsonFetch(`${baseUrl(companionUrl)}/v1/drive/watch`, {
+): Promise<{ channelId: string; expiresAt: string } | null> => {
+  const base = safeBaseUrl(companionUrl);
+  if (base === null) return Promise.resolve(null);
+  return jsonFetch(`${base}/v1/drive/watch`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fileId, accessToken }),
   });
+};
 
 /** Pushes one document into the organization search index. */
 export const indexForSearch = (
   companionUrl: string,
   entry: { fileId: string; name: string; content: string },
-): Promise<{ ok: boolean } | null> =>
-  jsonFetch(`${baseUrl(companionUrl)}/v1/search/index`, {
+): Promise<{ ok: boolean } | null> => {
+  const base = safeBaseUrl(companionUrl);
+  if (base === null) return Promise.resolve(null);
+  return jsonFetch(`${base}/v1/search/index`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(entry),
   });
+};
 
 /** Queries the organization index; null means no companion or failure. */
 export const searchCompanion = (
   companionUrl: string,
   query: string,
-): Promise<{ results: CompanionSearchHit[] } | null> =>
-  jsonFetch(
-    `${baseUrl(companionUrl)}/v1/search?q=${encodeURIComponent(query)}`,
-    {},
-  );
+): Promise<{ results: CompanionSearchHit[] } | null> => {
+  const base = safeBaseUrl(companionUrl);
+  if (base === null) return Promise.resolve(null);
+  return jsonFetch(`${base}/v1/search?q=${encodeURIComponent(query)}`, {});
+};
 
 /** Fans a review event out to the configured integrations. */
 export const notifyIntegration = (
@@ -65,12 +84,15 @@ export const notifyIntegration = (
     fileId?: string;
     text: string;
   },
-): Promise<{ ok: boolean } | null> =>
-  jsonFetch(`${baseUrl(companionUrl)}/v1/integrations/notify`, {
+): Promise<{ ok: boolean } | null> => {
+  const base = safeBaseUrl(companionUrl);
+  if (base === null) return Promise.resolve(null);
+  return jsonFetch(`${base}/v1/integrations/notify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(event),
   });
+};
 
 export interface CompanionEventStream {
   close: () => void;
@@ -86,9 +108,9 @@ export const openEventStream = (
   onDriveChange: () => void,
 ): CompanionEventStream | null => {
   if (typeof WebSocket === "undefined") return null;
-  const wsUrl = baseUrl(companionUrl)
-    .replace(/^http:/, "ws:")
-    .replace(/^https:/, "wss:");
+  const base = safeBaseUrl(companionUrl);
+  if (base === null) return null;
+  const wsUrl = base.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
   let socket: WebSocket;
   let closed = false;
   let heartbeat: ReturnType<typeof setInterval> | null = null;

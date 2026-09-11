@@ -9,9 +9,15 @@ FROM node:22-alpine
 WORKDIR /app
 
 COPY companion/package*.json ./
-RUN npm ci --omit=dev
+# --ignore-scripts: the runtime deps (yjs, ws, lib0) ship no required
+# lifecycle scripts, so blocking them removes a supply-chain vector.
+RUN npm ci --omit=dev --ignore-scripts
 
 COPY companion/src ./src
+
+# Drop to the unprivileged node user; the service needs no root
+# capabilities.
+USER node
 
 ENV PORT=8787 \
     NODE_ENV=production

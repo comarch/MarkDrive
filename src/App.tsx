@@ -149,8 +149,65 @@ const toPersistableSettings = (
   templatesFolderId: value.templatesFolderId,
   language: value.language,
   richView: value.richView,
+  companionUrl: value.companionUrl,
   ai: { ...value.ai, apiKey: "" },
 });
+
+type DriveHeadState =
+  | { outcome: "clear" }
+  | { outcome: "adopted"; headRevisionId: string }
+  | { outcome: "conflict"; baseContent: string; remoteContent: string };
+
+/**
+ * Compares the Drive head revision with the one this session synced
+ * from. "adopted" means both sides hold the same merged text, so the
+ * new head is safe to take without a conflict dialog.
+ */
+const checkDriveHead = async (input: {
+  fileId: string;
+  knownHead: string | null | undefined;
+  content: string;
+  lastSynced: string;
+}): Promise<DriveHeadState> => {
+  if (!input.knownHead) return { outcome: "clear" };
+  let remoteHead: string | null = null;
+  try {
+    remoteHead = await driveService.fetchHeadRevisionId(input.fileId);
+  } catch {
+    // The revision check is best effort; the update call still
+    // reports hard failures.
+  }
+  if (remoteHead === null || remoteHead === input.knownHead) {
+    return { outcome: "clear" };
+  }
+  const remote = await driveService.getFile(input.fileId);
+  if (remote.content === input.content) {
+    return { outcome: "adopted", headRevisionId: remoteHead };
+  }
+  return {
+    outcome: "conflict",
+    baseContent: input.lastSynced,
+    remoteContent: remote.content,
+  };
+};
+
+/** Best-effort offline queue write; false means the caller should
+ * surface a save error instead. */
+const tryQueueOfflineSave = async (entry: {
+  fileId: string;
+  name: string;
+  content: string;
+  baseRevisionId: string | null;
+  baseContent: string;
+}): Promise<boolean> => {
+  try {
+    await enqueueSave({ ...entry, savedAt: new Date().toISOString() });
+    return true;
+  } catch (queueError) {
+    console.error("Offline queue write failed:", queueError);
+    return false;
+  }
+};
 
 export const App: React.FC = () => {
   // Application Settings
@@ -433,7 +490,8 @@ export const App: React.FC = () => {
       const remote = await driveService.getFile(fileMetadata.id);
       setFileMetadata(remote.metadata);
       setContent(remote.content);
-      localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, remote.content);
+      // The draft cache is not written here: the reloaded text comes
+      // straight from Drive, and the cache refreshes on the next edit.
       setLastSyncedContent(remote.content);
       setDriveChangeNotice(false);
     } catch (err) {
@@ -595,80 +653,76 @@ export const App: React.FC = () => {
   const handleSaveDocument = useCallback(async () => {
     if (isConflictOpenRef.current) return; // resolve the open conflict first
     setSaveStatus("saving");
+
+    // Draft mode: the content and title change handlers already keep
+    // the local cache current, so re-writing the restored values here
+    // would only copy storage-read data back into browser storage.
+    if (!fileMetadata) {
+      setSaveStatus("saved");
+      return;
+    }
+
+    // Detect concurrent edits: compare the Drive head revision with the
+    // revision this session last synced from. Co-editing sessions save
+    // the same merged content from both sides; adopting the new head
+    // instead of opening a dialog is what lets two authors edit without
+    // conflict dialogs.
+    const headState = await checkDriveHead({
+      fileId: fileMetadata.id,
+      knownHead: fileMetadata.headRevisionId,
+      content,
+      lastSynced: lastSyncedContentRef.current,
+    });
+    if (headState.outcome === "conflict") {
+      setConflict({
+        baseContent: headState.baseContent,
+        remoteContent: headState.remoteContent,
+      });
+      isConflictOpenRef.current = true;
+      setSaveStatus("unsaved");
+      return;
+    }
+    if (headState.outcome === "adopted") {
+      setFileMetadata((prev) =>
+        prev ? { ...prev, headRevisionId: headState.headRevisionId } : prev,
+      );
+    }
+
     try {
-      if (fileMetadata) {
-        // Detect concurrent edits: compare the Drive head revision with the
-        // revision this session last synced from.
-        const knownHead = fileMetadata.headRevisionId;
-        let remoteHead: string | null = null;
-        try {
-          remoteHead = await driveService.fetchHeadRevisionId(fileMetadata.id);
-        } catch {
-          // The revision check is best effort; the update call still reports
-          // hard failures.
-        }
-        if (knownHead && remoteHead && knownHead !== remoteHead) {
-          const remote = await driveService.getFile(fileMetadata.id);
-          // Co-editing sessions save the same merged content from both
-          // sides; adopting the new head instead of opening a dialog is
-          // what makes two authors edit without conflict dialogs.
-          if (remote.content === content) {
-            setFileMetadata((prev) =>
-              prev ? { ...prev, headRevisionId: remoteHead } : prev,
-            );
-          } else {
-            setConflict({
-              baseContent: lastSyncedContentRef.current,
-              remoteContent: remote.content,
-            });
-            isConflictOpenRef.current = true;
-            setSaveStatus("unsaved");
-            return;
-          }
-        }
-        const updated = await driveService.updateFile(
-          fileMetadata.id,
+      const updated = await driveService.updateFile(
+        fileMetadata.id,
+        content,
+        documentTitle,
+      );
+      // Merge instead of replace: update responses omit fields like
+      // parents, and losing them would misplace later image uploads.
+      setFileMetadata((prev) => (prev ? { ...prev, ...updated } : updated));
+      setLastSyncedContent(content);
+      // Best effort: keep the organization search index fresh.
+      if (companionUrl) {
+        void indexForSearch(companionUrl, {
+          fileId: fileMetadata.id,
+          name: documentTitle,
           content,
-          documentTitle,
-        );
-        // Merge instead of replace: update responses omit fields like
-        // parents, and losing them would misplace later image uploads.
-        setFileMetadata((prev) => (prev ? { ...prev, ...updated } : updated));
-        setLastSyncedContent(content);
-        // Best effort: keep the organization search index fresh.
-        if (companionUrl) {
-          void indexForSearch(companionUrl, {
-            fileId: fileMetadata.id,
-            name: documentTitle,
-            content,
-          });
-        }
-      } else {
-        // Draft mode: the content and title change handlers already
-        // keep the local cache current, so re-writing the restored
-        // values here would only copy storage-read data back into
-        // browser storage.
+        });
       }
       setSaveStatus("saved");
     } catch (err) {
       console.error("Save failed:", err);
       // Offline: queue the save and replay it on reconnect instead of
       // surfacing a hard error the user cannot act on.
-      if (fileMetadata && isNetworkError(err)) {
-        try {
-          await enqueueSave({
+      const queued = isNetworkError(err)
+        ? await tryQueueOfflineSave({
             fileId: fileMetadata.id,
             name: documentTitle,
             content,
             baseRevisionId: fileMetadata.headRevisionId ?? null,
             baseContent: lastSyncedContentRef.current,
-            savedAt: new Date().toISOString(),
-          });
-          setSaveStatus("offline");
-          return;
-        } catch (queueError) {
-          console.error("Offline queue write failed:", queueError);
-        }
+          })
+        : false;
+      if (queued) {
+        setSaveStatus("offline");
+        return;
       }
       setSaveStatus("error");
     }

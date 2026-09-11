@@ -63,7 +63,7 @@ export const createAuditLog = (logPath = "", retentionDays = 365) => {
 
     export(since) {
       prune();
-      const cutoff = since ? Date.parse(since) : NaN;
+      const cutoff = since ? Date.parse(since) : Number.NaN;
       const rows = Number.isNaN(cutoff)
         ? entries
         : entries.filter((entry) => Date.parse(entry.timestamp) >= cutoff);
@@ -84,7 +84,7 @@ export const createAuditLog = (logPath = "", retentionDays = 365) => {
         retentionDays,
         byEvent,
         first: entries[0]?.timestamp ?? null,
-        last: entries[entries.length - 1]?.timestamp ?? null,
+        last: entries.at(-1)?.timestamp ?? null,
       };
     },
 
