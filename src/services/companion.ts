@@ -73,7 +73,9 @@ export const searchCompanion = (
 ): Promise<{ results: CompanionSearchHit[] } | null> => {
   const base = safeBaseUrl(companionUrl);
   if (base === null) return Promise.resolve(null);
-  return jsonFetch(`${base}/v1/search?q=${encodeURIComponent(query)}`, {});
+  const url = new URL(`${base}/v1/search`);
+  url.searchParams.set("q", query);
+  return jsonFetch(url.toString(), {});
 };
 
 /** Fans a review event out to the configured integrations. */

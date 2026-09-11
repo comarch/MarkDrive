@@ -18,7 +18,7 @@ export function sanitizeStoredText(value: string): string {
 
 export function safeSetItem(key: string, value: string): void {
   try {
-    localStorage.setItem(key, sanitizeStoredText(value));
+    localStorage.setItem(key, `v2:${encodeURIComponent(sanitizeStoredText(value))}`);
   } catch {
     // Quota exceeded or storage unavailable; in-memory state stays
     // authoritative and the next successful write retries.
@@ -27,7 +27,10 @@ export function safeSetItem(key: string, value: string): void {
 
 export function safeGetItem(key: string): string | null {
   try {
-    return localStorage.getItem(key);
+    const raw = localStorage.getItem(key);
+    if (raw === null) return null;
+    if (raw.startsWith("v2:")) return decodeURIComponent(raw.slice(3));
+    return raw;
   } catch {
     return null;
   }
