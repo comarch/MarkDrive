@@ -1,5 +1,7 @@
 import MarkdownIt from "markdown-it";
 import taskLists from "markdown-it-task-lists";
+import footnotePlugin from "markdown-it-footnote";
+import deflistPlugin from "markdown-it-deflist";
 import { full as emojiPlugin } from "markdown-it-emoji";
 import anchorPlugin from "markdown-it-anchor";
 import hljs from "highlight.js";
@@ -22,8 +24,11 @@ const ALLOWED_TAGS = [
   "blockquote",
   "br",
   "code",
+  "dd",
   "del",
   "div",
+  "dl",
+  "dt",
   "em",
   "h1",
   "h2",
@@ -67,6 +72,7 @@ const ALLOWED_TAGS = [
   "p",
   "pre",
   "semantics",
+  "section",
   "span",
   "strong",
   "sub",
@@ -114,6 +120,7 @@ const ALLOWED_ATTRIBUTES = [
   "rowspacing",
   "rspace",
   "scriptlevel",
+  "role",
   "separator",
   "src",
   "start",
@@ -193,6 +200,8 @@ export const md: MarkdownIt = new MarkdownIt({
 
 // Add plugins
 md.use(taskLists, { enabled: true, label: true });
+md.use(footnotePlugin);
+md.use(deflistPlugin);
 md.use(emojiPlugin);
 md.use(anchorPlugin, {
   slugify: (s: string) =>
@@ -326,7 +335,19 @@ export function parseMarkdown(
     },
   );
 
-  return DOMPurify.sanitize(withDocLinks, {
+  // GitHub-style callouts: a blockquote that opens with [!TYPE] becomes a
+  // titled callout. Only known types transform, so nothing free-form enters.
+  const CALLOUT_PATTERN =
+    /<blockquote>\s*<p>\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/gi;
+  const withCallouts = withDocLinks.replace(
+    CALLOUT_PATTERN,
+    (_match, type: string) => {
+      const label = type.charAt(0) + type.slice(1).toLowerCase();
+      return `<blockquote class="callout callout-${type.toLowerCase()}"><p class="callout-title">${label}</p><p>`;
+    },
+  );
+
+  return DOMPurify.sanitize(withCallouts, {
     ALLOWED_ATTR: ALLOWED_ATTRIBUTES,
     ALLOWED_TAGS,
     ALLOW_ARIA_ATTR: true,

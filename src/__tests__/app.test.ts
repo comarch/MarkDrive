@@ -43,6 +43,40 @@ describe("markdownParser", () => {
     expect(html).toContain('data-task-line="5"');
   });
 
+  it.each([
+    {
+      name: "footnotes with references and a footnotes section",
+      md: "Text with a note[^1].\n\n[^1]: The note body.\n",
+      contains: ["footnote-ref", "footnotes", "The note body."],
+      notContains: [] as string[],
+    },
+    {
+      name: "definition lists",
+      md: "Term\n: Definition\n",
+      contains: ["<dl>", "<dt>Term</dt>", "<dd>Definition</dd>"],
+      notContains: [],
+    },
+    {
+      name: "known callout markers as titled callouts only",
+      md: "> [!NOTE] Only known types transform.\n\n> [!EVIL] Stays a quote.\n",
+      contains: [
+        'class="callout callout-note"',
+        'class="callout-title">Note</p>',
+        "Only known types transform.",
+        "[!EVIL]",
+      ],
+      notContains: ["callout-evil"],
+    },
+  ])("renders $name", ({ md, contains, notContains }) => {
+    const html = parseMarkdown(md);
+    for (const expected of contains) {
+      expect(html).toContain(expected);
+    }
+    for (const forbidden of notContains) {
+      expect(html).not.toContain(forbidden);
+    }
+  });
+
   it("renders tables", () => {
     const md = "| Col 1 | Col 2 |\n| --- | --- |\n| Val 1 | Val 2 |";
     const html = parseMarkdown(md);
