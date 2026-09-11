@@ -90,7 +90,13 @@ export type StringKey =
   | "ai.settings.endpoint"
   | "ai.settings.companionUrl"
   | "ai.settings.model"
-  | "ai.settings.warning";
+  | "ai.settings.warning"
+  | "status.offline"
+  | "status.offlineTitle"
+  | "export.docx"
+  | "export.docxDesc"
+  | "export.gdocs"
+  | "export.gdocsDesc";
 
 interface CatalogueRow {
   en: string;
@@ -182,6 +188,12 @@ ai.settings.endpoint|Endpoint URL|Adres endpointu
 ai.settings.companionUrl|Companion base URL|Bazowy adres usługi towarzyszącej
 ai.settings.model|Model name|Nazwa modelu
 ai.settings.warning|Document content is sent to the configured provider. The key is kept for this session only.|Treść dokumentu trafia do skonfigurowanego dostawcy. Klucz jest przechowywany tylko do końca sesji.
+status.offline|Offline, queued|Offline, w kolejce
+status.offlineTitle|The network is down. Edits are queued locally and replay to Drive on reconnect.|Sieć jest niedostępna. Zmiany czekają lokalnie i trafią na Dysk po ponownym połączeniu.
+export.docx|Word document (.docx)|Dokument Word (.docx)
+export.docxDesc|Generated in the browser with headings, lists, tables, and links|Generowany w przeglądarce z nagłówkami, listami, tabelami i linkami
+export.gdocs|Google Docs (copy in Drive)|Google Docs (kopia na Dysku)
+export.gdocsDesc|Drive converts a copy of this Markdown into a Google Docs file|Dysk konwertuje kopię tego Markdownu na plik Google Docs
 `;
 
 const parseCatalogue = (raw: string): Record<StringKey, CatalogueRow> => {

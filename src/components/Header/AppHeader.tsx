@@ -25,6 +25,7 @@ import {
   Presentation,
   Type,
   Sparkles,
+  CloudOff,
 } from "lucide-react";
 import { DriveUser, SaveStatus, DriveFileMetadata } from "../../types/drive";
 import {
@@ -246,6 +247,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <span className="flex items-center gap-1 text-amber-500">
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
                 <span className="hidden sm:inline">{t("status.unsaved")}</span>
+              </span>
+            )}
+            {saveStatus === "offline" && (
+              <span
+                className="flex items-center gap-1 text-amber-600 dark:text-amber-400"
+                title={t("status.offlineTitle")}
+              >
+                <CloudOff className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t("status.offline")}</span>
               </span>
             )}
             {saveStatus === "error" && (

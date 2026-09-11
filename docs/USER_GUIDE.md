@@ -196,11 +196,23 @@ Select the export button in the header.
 | ------------ | -------------------------------------------------------------- |
 | Markdown     | Downloads the portable `.md` source                            |
 | Styled HTML  | Downloads an HTML document with embedded layout styles         |
+| Word         | Downloads a `.docx` generated in the browser                   |
+| Google Docs  | Asks Drive to convert a copy into a Google Docs file           |
 | Print or PDF | Opens the browser print workflow with document-focused styling |
 
-Choose Markdown for future editing, HTML for easy sharing, and PDF for a fixed review or archive copy.
+Choose Markdown for future editing, HTML for easy sharing, and PDF for a fixed review or archive copy. Word (.docx) is generated in the browser with headings, lists, tables, and links for reviewers who refuse Markdown. Google Docs export asks Drive to convert a copy, so the Markdown original stays untouched.
 
 Styled HTML is self-contained: math, code highlighting, and fonts are inlined as data, so the exported file makes no outbound requests.
+
+## Work offline
+
+The app shell caches for offline opening: after the first visit, MarkQuire
+loads without a network. When the network drops while a Drive document is
+open, saves stop failing loudly - the status shows **Offline, queued** and
+edits wait in the browser's queue. On reconnect the queue replays against
+Drive with the same revision check as live saves: if another session moved
+the file ahead, the merge dialog opens exactly as it would online, and
+nothing is overwritten silently. Queued saves live in this browser only.
 
 ## AI assistant (optional)
 
