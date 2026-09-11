@@ -157,7 +157,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 flex items-center justify-between no-print z-40 select-none">
+    <header className="relative h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 flex items-center justify-between no-print z-40 select-none">
+      {/* Brand signature gradient; decorative only */}
       {/* Left: App Logo & Document Title */}
       <div className="flex items-center gap-3">
         {/* Product logo */}
@@ -609,6 +610,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           )}
         </div>
       </div>
+
+      {/* Primary brand gradient accent along the header edge */}
+      <div
+        className="brand-gradient-bar absolute inset-x-0 bottom-0 h-0.5"
+        aria-hidden="true"
+      />
     </header>
   );
 };

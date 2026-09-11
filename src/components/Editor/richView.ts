@@ -197,7 +197,7 @@ const richViewTheme = EditorView.theme({
     fontSize: "0.9em",
   },
   ".cm-rich-link-text": {
-    color: "#2563eb",
+    color: "#0018CE",
     textDecoration: "underline",
     textUnderlineOffset: "2px",
   },

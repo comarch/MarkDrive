@@ -2,22 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Material 3 inspired shell tokens: soft surfaces, pill controls, and
-   a page-like canvas. Values stay in the existing slate/brand palette
-   so dark mode keeps working without new dependencies. */
+/* Canonical brand tokens, copied verbatim from the organization's
+   machine-readable token set so the app stays synchronized with the source. */
 :root {
-  --mq-surface: #f8fafc;
+  --cl-color-cyan: #00ffff;
+  --cl-color-blue: #0018ce;
+  --cl-color-violet: #6400be;
+  --cl-color-magenta: #ff009b;
+  --cl-color-red: #ff0000;
+  --cl-color-black: #000000;
+  --cl-color-grey-100: #f8f8f8;
+  --cl-color-grey-200: #efefef;
+  --cl-color-grey-300: #d9d9d9;
+  --cl-color-grey-400: #bfbfbf;
+  --cl-color-grey-500: #a6a6a6;
+  --cl-color-grey-600: #808080;
+  --cl-color-grey-700: #595959;
+  --cl-color-grey-800: #404040;
+  --cl-color-grey-900: #1a1a1a;
+  --cl-gradient-primary: linear-gradient(
+    90deg,
+    #00ffff 0%,
+    #6400be 50%,
+    #ff0000 100%
+  );
+  --cl-gradient-cyan-violet: linear-gradient(90deg, #00ffff 0%, #6400be 100%);
+  --cl-gradient-blue-magenta: linear-gradient(90deg, #0018ce 0%, #ff009b 100%);
+  --cl-gradient-violet-red: linear-gradient(90deg, #6400be 0%, #ff0000 100%);
+  --cl-font-family-primary: "Cera Pro";
+  --cl-font-family-fallback: Inter;
+  --cl-font-family: "Cera Pro", Inter, Arial, sans-serif;
+}
+
+/* Shell surfaces on the canonical grey ramp. */
+:root {
+  --mq-surface: #f8f8f8;
   --mq-surface-high: #ffffff;
   --mq-surface-shadow:
-    0 1px 2px rgb(15 23 42 / 0.06), 0 4px 12px rgb(15 23 42 / 0.05);
-  --mq-canvas-shadow:
-    0 1px 3px rgb(15 23 42 / 0.08), 0 8px 24px rgb(15 23 42 / 0.06);
+    0 1px 2px rgb(0 0 0 / 0.06), 0 4px 12px rgb(0 0 0 / 0.05);
+  --mq-canvas-shadow: 0 1px 3px rgb(0 0 0 / 0.08), 0 8px 24px rgb(0 0 0 / 0.06);
 }
 .dark {
-  --mq-surface: #0f172a;
-  --mq-surface-high: #1e293b;
+  --mq-surface: #000000;
+  --mq-surface-high: #1a1a1a;
   --mq-surface-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
   --mq-canvas-shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+/* Brand signature gradient, used as a thin decorative accent.
+   No text sits on it, so contrast is unaffected. */
+.brand-gradient-bar {
+  background: var(--cl-gradient-primary);
 }
 
 /* Page-like centered canvas for the preview pane */
@@ -26,7 +61,7 @@
 }
 .preview-canvas .markdown-body {
   background: var(--mq-surface-high);
-  border: 1px solid rgb(148 163 184 / 0.25);
+  border: 1px solid rgb(128 128 128 / 0.3);
   border-radius: 12px;
   box-shadow: var(--mq-canvas-shadow);
   padding: 40px 56px;
@@ -34,9 +69,12 @@
 
 /* Keyboard users get a visible focus ring on every control */
 :focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #0018ce;
   outline-offset: 2px;
   border-radius: 4px;
+}
+.dark :focus-visible {
+  outline-color: #00ffff;
 }
 
 /* Respect motion preferences for transitions and smooth scrolling */
@@ -53,6 +91,7 @@
 @layer base {
   body {
     @apply antialiased select-none;
+    font-family: var(--cl-font-family);
   }
 }
 
@@ -65,19 +104,19 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.4);
+  background: rgba(128, 128, 128, 0.4);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.7);
+  background: rgba(128, 128, 128, 0.7);
 }
 
-/* Markdown preview prose styling */
+/* Markdown preview prose styling: Inter fallback per the recommended
+   brand stack, with the paragraph role tracking. */
 .markdown-body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica,
-    Arial, sans-serif;
+  font-family: var(--cl-font-family);
   line-height: 1.6;
+  letter-spacing: -0.01em;
   word-wrap: break-word;
 }
 
@@ -107,7 +146,7 @@ a.wikilink:hover {
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.85em;
-  color: #64748b;
+  color: #595959;
 }
 
 /* Graphviz diagrams rendered in the preview */
@@ -134,10 +173,13 @@ a.wikilink:hover {
 /* Excalidraw view-only islands */
 .excalidraw-island {
   height: 420px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d9d9d9;
   border-radius: 8px;
   margin: 12px 0;
   overflow: hidden;
+}
+.dark .excalidraw-island {
+  border-color: #333333;
 }
 
 /* GitHub-style callout blocks */
@@ -171,7 +213,7 @@ a.wikilink:hover {
 /* Footnotes rendered by markdown-it-footnote */
 .footnotes {
   font-size: 0.85em;
-  color: #64748b;
+  color: #595959;
 }
 .footnotes hr {
   margin: 16px 0;
@@ -224,7 +266,7 @@ a.wikilink:hover {
   @apply font-mono text-sm;
 }
 .markdown-body :not(pre) > code {
-  @apply bg-slate-100 dark:bg-slate-800 text-pink-600 dark:text-pink-400 px-1.5 py-0.5 rounded text-xs border border-slate-200 dark:border-slate-700;
+  @apply bg-slate-100 dark:bg-slate-800 text-tint-violet-500 dark:text-tint-violet-200 px-1.5 py-0.5 rounded text-xs border border-slate-200 dark:border-slate-700;
 }
 .markdown-body hr {
   @apply my-6 border-slate-200 dark:border-slate-700;
@@ -266,6 +308,18 @@ a.wikilink:hover {
 .cm-scroller {
   overflow: auto !important;
   padding-bottom: 200px;
+}
+/* Dark editor chrome on canonical surfaces; oneDark keeps syntax colors */
+.dark .cm-editor {
+  background-color: #1a1a1a;
+}
+.dark .cm-editor .cm-gutters {
+  background-color: #1a1a1a;
+  border-right: 1px solid #333333;
+  color: #808080;
+}
+.dark .cm-editor .cm-activeLine {
+  background-color: rgb(51 51 51 / 0.4);
 }
 
 /* Print styling */

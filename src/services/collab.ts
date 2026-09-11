@@ -22,17 +22,19 @@ export interface CollabSession {
   destroy: () => void;
 }
 
+// Presence colors from the brand palette, picked dark enough for white
+// initials: all pairs pass 4.5:1.
 const PEER_COLORS = [
-  "#2563eb",
-  "#dc2626",
-  "#059669",
-  "#d97706",
-  "#7c3aed",
-  "#0891b2",
+  "#0018CE",
+  "#6400BE",
+  "#0710A8",
+  "#B0006B",
+  "#B00000",
+  "#26005C",
 ];
 
 const colorFor = (clientId: number) =>
-  PEER_COLORS[Math.abs(clientId) % PEER_COLORS.length] ?? "#2563eb";
+  PEER_COLORS[Math.abs(clientId) % PEER_COLORS.length] ?? "#0018CE";
 
 /**
  * Pushes a whole-document content string into the shared text with a

@@ -65,19 +65,22 @@ No competitor in any ring holds all four at once.
 
 ## Gap analysis
 
-| Gap                                             | Who exposes it                     | Roadmap item |
-| ----------------------------------------------- | ---------------------------------- | ------------ |
-| No version history or restore                   | Google Docs, GitHub                | P0           |
-| Last write wins on concurrent save              | Every real-time competitor         | P0           |
-| No image paste or upload                        | Docs, HackMD, StackEdit            | P0           |
-| No cross-document links or Drive file switching | Obsidian, Notion, Confluence       | P0 and P1    |
-| No suggestion mode                              | Google Docs                        | P1           |
-| No wikilinks, backlinks, or graph               | Obsidian                           | P1           |
-| No slides, book mode, or publishing             | HackMD, HedgeDoc, Obsidian Publish | P1           |
-| Interface does not match Workspace expectations | Google Docs and Sheets             | P1           |
-| No AI assistance                                | Google Docs with Gemini, Notion AI | P1           |
-| No simultaneous editing or presence             | HackMD, HedgeDoc, CryptPad, Docs   | P2           |
-| No change notifications or chat integrations    | Docs, Confluence, Notion           | P2           |
+Every gap found during the original analysis is implemented now. The table
+records each former gap and the roadmap item that closed it.
+
+| Former gap                                      | Who exposed it                     | Closed by     |
+| ----------------------------------------------- | ---------------------------------- | ------------- |
+| No version history or restore                   | Google Docs, GitHub                | Item 2        |
+| Last write wins on concurrent save              | Every real-time competitor         | Item 1        |
+| No image paste or upload                        | Docs, HackMD, StackEdit            | Item 3        |
+| No cross-document links or Drive file switching | Obsidian, Notion, Confluence       | Items 5 and 6 |
+| No suggestion mode                              | Google Docs                        | Item 15       |
+| No wikilinks, backlinks, or graph               | Obsidian                           | Item 20       |
+| No slides, book mode, or publishing             | HackMD, HedgeDoc, Obsidian Publish | Item 21       |
+| Interface does not match Workspace expectations | Google Docs and Sheets             | Item 24       |
+| No AI assistance                                | Google Docs with Gemini, Notion AI | Item 26       |
+| No simultaneous editing or presence             | HackMD, HedgeDoc, CryptPad, Docs   | Item 27       |
+| No change notifications or chat integrations    | Docs, Confluence, Notion           | Items 28, 30  |
 
 ## Constraints discovered during analysis
 
@@ -100,6 +103,8 @@ permissions, comments, and revisions, and the browser talks to Google directly.
 That choice is what makes "no data in our systems" true, and it is documented in
 the [security model](./SECURITY_MODEL.md).
 
-The cost is explicit: no simultaneous editing, no change webhooks, no server-side
-search index, and no AI proxy. The roadmap keeps the core backend-free and moves
-those four capabilities behind an optional companion service.
+The cost was explicit: no simultaneous editing, no change webhooks, no
+server-side search index, and no AI proxy. The roadmap kept the core
+backend-free and moved those four capabilities behind the optional companion
+service, which now ships with co-editing, presence, notifications, an
+organization search index, and a server-side AI proxy.

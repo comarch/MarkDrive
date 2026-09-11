@@ -52,15 +52,41 @@ The icon combines:
 
 ## Color palette
 
+### Product mark
+
 | Role               | Value     |
 | ------------------ | --------- |
 | MarkQuire blue     | `#087FC4` |
 | Deep navy          | `#0F172A` |
 | Comarch red accent | `#E30613` |
 | White              | `#FFFFFF` |
-| Slate background   | `#F8FAFC` |
 
 Red is an accent. Blue remains the primary product color.
+
+### Interface tokens
+
+The application UI follows the organization's canonical brand tokens. Values
+are defined once in `src/index.css` (`--cl-*`) and `tailwind.config.js`.
+
+| Role                   | Value                                               |
+| ---------------------- | --------------------------------------------------- |
+| Primary accent (light) | `#0018CE` (blue)                                    |
+| Primary button         | `#0710A8` (blue tint 500)                           |
+| Accent (dark mode)     | `#00FFFF` (cyan)                                    |
+| Signature gradient     | cyan `#00FFFF` to violet `#6400BE` to red `#FF0000` |
+| Neutral ramp           | greys `#F8F8F8` to `#1A1A1A`                        |
+| Dark canvas            | `#000000`                                           |
+| Dark surface           | `#1A1A1A`                                           |
+
+The gradient appears as a decorative bar under the app header. No text sits on
+it. Typography uses the recommended brand stack: Cera Pro when licensed,
+Inter (self-hosted) as the documented fallback.
+
+### Dark surfaces
+
+Dark mode uses the canonical black tint family: a `#000000` canvas with
+`#1A1A1A` elevated surfaces and the cyan signature accent for links and active
+states.
 
 ## GitHub repository copy
 

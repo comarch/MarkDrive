@@ -575,6 +575,10 @@ export const App: React.FC = () => {
       document.documentElement.classList.remove("dark");
       localStorage.setItem("theme", "light");
     }
+    // Keep the mobile browser chrome aligned with the header surface
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", isDark ? "#000000" : "#FFFFFF");
   }, [isDark]);
 
   // Subscribe to Google Auth changes
