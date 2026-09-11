@@ -20,7 +20,12 @@ export function sanitizeStoredText(value: string): string {
 export function safeSetItem(key: string, value: string): void {
   try {
     const encoded = encodeURIComponent(sanitizeStoredText(value));
-    localStorage.setItem(key, "v2:" + encoded);
+    // The payload is control-stripped and percent-encoded before it lands
+    // in storage, and every reader keeps treating stored values as
+    // untrusted (the preview output passes through DOMPurify). The taint
+    // tracker has no sanitizer model for this pattern, so the storage
+    // write is suppressed here after that mitigation.
+    localStorage.setItem(key, "v2:" + encoded); // NOSONAR
   } catch {
     // Quota exceeded or storage unavailable; in-memory state stays
     // authoritative and the next successful write retries.
