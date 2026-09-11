@@ -172,20 +172,6 @@ export const md: MarkdownIt = new MarkdownIt({
   highlight: function (str: string, lang: string) {
     const normalized = lang.toLowerCase();
 
-    if (normalized === "mermaid") {
-      return `<div class="mermaid">${md.utils.escapeHtml(str)}</div>`;
-    }
-
-    // Graphviz sources render to SVG in the preview after parsing.
-    if (normalized === "dot" || normalized === "graphviz") {
-      return `<div class="graphviz-src">${md.utils.escapeHtml(str)}</div>`;
-    }
-
-    // Excalidraw scenes embed as view-only islands in the preview.
-    if (normalized === "excalidraw") {
-      return `<div class="excalidraw-embed">${md.utils.escapeHtml(str)}</div>`;
-    }
-
     if (normalized && ["math", "latex", "katex"].includes(normalized)) {
       try {
         return `<div class="katex-display">${katex.renderToString(str, {
@@ -221,6 +207,34 @@ md.use(anchorPlugin, {
     encodeURIComponent(String(s).trim().toLowerCase().replace(/\s+/g, "-")),
   permalink: false,
 });
+
+// Diagram fences render as page-level containers, not code blocks. The
+// default fence rule wraps any highlight() result that does not start
+// with <pre> inside <pre><code>, and the preview styles pre as a dark
+// code block, which put diagrams on a black background in light mode.
+// Overriding the fence rule keeps these blocks on the page background.
+const defaultFenceRenderer =
+  md.renderer.rules.fence ??
+  ((tokens, idx, options, _env, self) =>
+    self.renderToken(tokens, idx, options));
+md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const token = tokens[idx];
+  if (!token) return defaultFenceRenderer(tokens, idx, options, env, self);
+  const normalized = token.info.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+
+  if (normalized === "mermaid") {
+    return `<div class="mermaid">${md.utils.escapeHtml(token.content)}</div>\n`;
+  }
+  // Graphviz sources render to SVG in the preview after parsing.
+  if (normalized === "dot" || normalized === "graphviz") {
+    return `<div class="graphviz-src">${md.utils.escapeHtml(token.content)}</div>\n`;
+  }
+  // Excalidraw scenes embed as view-only islands in the preview.
+  if (normalized === "excalidraw") {
+    return `<div class="excalidraw-embed">${md.utils.escapeHtml(token.content)}</div>\n`;
+  }
+  return defaultFenceRenderer(tokens, idx, options, env, self);
+};
 
 /**
  * Pre-processes text for LaTeX equations before markdown parsing.

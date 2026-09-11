@@ -182,6 +182,16 @@ a.wikilink:hover {
   border-color: #333333;
 }
 
+/* Diagram fences render on the page background, not in a code block */
+.markdown-body .mermaid {
+  margin: 12px 0;
+  text-align: center;
+}
+.markdown-body .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* GitHub-style callout blocks */
 .callout {
   border-left: 4px solid #94a3b8;
