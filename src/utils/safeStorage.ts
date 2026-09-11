@@ -19,10 +19,8 @@ export function sanitizeStoredText(value: string): string {
 
 export function safeSetItem(key: string, value: string): void {
   try {
-    localStorage.setItem(
-      key,
-      `v2:${encodeURIComponent(sanitizeStoredText(value))}`,
-    );
+    const encoded = encodeURIComponent(sanitizeStoredText(value));
+    localStorage.setItem(key, "v2:" + encoded);
   } catch {
     // Quota exceeded or storage unavailable; in-memory state stays
     // authoritative and the next successful write retries.
