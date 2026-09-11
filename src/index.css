@@ -48,6 +48,50 @@ a.wikilink:hover {
   filter: brightness(0.85);
 }
 
+/* KaTeX display math: scrollable container with anchored equation numbers */
+.katex-display {
+  @apply overflow-x-auto py-2;
+  position: relative;
+}
+.katex-display .equation-number {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85em;
+  color: #64748b;
+}
+
+/* Graphviz diagrams rendered in the preview */
+.graphviz-rendered {
+  margin: 12px 0;
+  text-align: center;
+}
+.graphviz-rendered svg {
+  max-width: 100%;
+  height: auto;
+}
+.graphviz-error {
+  color: #e11d48;
+  font-size: 0.85em;
+  padding: 8px 12px;
+  border: 1px dashed #e11d48;
+  border-radius: 6px;
+  margin: 12px 0;
+}
+.graphviz-error::before {
+  content: attr(data-error);
+}
+
+/* Excalidraw view-only islands */
+.excalidraw-island {
+  height: 420px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+
 /* GitHub-style callout blocks */
 .callout {
   border-left: 4px solid #94a3b8;
@@ -153,11 +197,6 @@ a.wikilink:hover {
 }
 .markdown-body .task-list-item input[type="checkbox"] {
   @apply rounded text-brand-600 focus:ring-brand-500 h-4 w-4 border-slate-300;
-}
-
-/* KaTeX formula container */
-.katex-display {
-  @apply overflow-x-auto py-2;
 }
 
 /* Comment highlights */
