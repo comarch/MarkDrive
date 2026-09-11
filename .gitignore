@@ -35,6 +35,7 @@ coverage
 # Playwright
 test-results/
 playwright-report/
+.playwright-mcp/
 
 # Companion test scratch files
 companion/.tmp-*.jsonl
