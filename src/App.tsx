@@ -40,6 +40,8 @@ import {
 
 import { authService } from "./services/googleAuth";
 import { driveService } from "./services/googleDrive";
+import { AI_BUILD_ENABLED, defaultAISettings } from "./services/ai";
+import { AIPanel } from "./components/AI/AIPanel";
 import { commentsService } from "./services/googleComments";
 import {
   parseDriveStateFromUrl,
@@ -89,6 +91,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   templatesFolderId: "",
   language: "en",
   richView: false,
+  ai: defaultAISettings(),
 };
 
 const LOCAL_STORAGE_CONTENT_KEY = "gdrive_md_last_content";
@@ -100,6 +103,12 @@ const LOCAL_STORAGE_SETTINGS_KEY = "gdrive_md_settings";
  * controls stay session-only, so nothing they touch reaches storage.
  * googleClientId stays out too: it has its own storage key in authService.
  */
+/**
+ * Fields written to the settings cache on modal save. The header zoom
+ * controls stay session-only, so nothing they touch reaches storage.
+ * googleClientId stays out (own storage key in authService), and the AI
+ * API key is never persisted: it lives in memory for this session only.
+ */
 const toPersistableSettings = (
   value: AppSettings,
 ): Omit<AppSettings, "googleClientId"> => ({
@@ -110,6 +119,7 @@ const toPersistableSettings = (
   templatesFolderId: value.templatesFolderId,
   language: value.language,
   richView: value.richView,
+  ai: { ...value.ai, apiKey: "" },
 });
 
 export const App: React.FC = () => {
@@ -117,9 +127,15 @@ export const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(() => {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_SETTINGS_KEY);
-      return stored
-        ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) }
-        : DEFAULT_SETTINGS;
+      if (!stored) return DEFAULT_SETTINGS;
+      const parsed = JSON.parse(stored) as Partial<AppSettings>;
+      // The AI block merges field by field so older stored settings
+      // never lose new defaults.
+      return {
+        ...DEFAULT_SETTINGS,
+        ...parsed,
+        ai: { ...defaultAISettings(), ...parsed.ai },
+      };
     } catch {
       return DEFAULT_SETTINGS;
     }
@@ -204,6 +220,8 @@ export const App: React.FC = () => {
   const [isGraphOpen, setIsGraphOpen] = useState(false);
   // Slide presentation mode
   const [isPresentOpen, setIsPresentOpen] = useState(false);
+  // AI assistant panel, feature-flagged by the build and the settings
+  const [isAIOpen, setIsAIOpen] = useState(false);
   // Passage deep link (#line=N), parsed once on mount.
   const [lineAnchor] = useState<number | null>(() => parseLineAnchorFromUrl());
   const lineAnchorAppliedRef = useRef(false);
@@ -233,6 +251,22 @@ export const App: React.FC = () => {
       fontSize: Math.max(12, prev.fontSize - 1),
     }));
   }, []);
+
+  // AI assistant: open discussion threads as plain text for prompts.
+  const aiThreadSnippets = useMemo(
+    () =>
+      comments
+        .filter((comment) => !comment.deleted)
+        .map((comment) =>
+          [
+            comment.content,
+            ...(comment.replies ?? []).map((reply) => reply.content),
+          ]
+            .filter((part) => part.length > 0)
+            .join("\n"),
+        ),
+    [comments],
+  );
 
   // Interface language applies to the whole shell. The catalogue is a
   // module singleton, so the mirror state forces the re-render that picks
@@ -266,6 +300,13 @@ export const App: React.FC = () => {
     (!isMobile || mobilePane === "preview");
   // Suggestion mode: edits are recorded as a patch, not written to Drive.
   const [editingMode, setEditingMode] = useState<EditingMode>("edit");
+  // Mirror of editingMode for handlers that must see the mode
+  // synchronously, before the next render lands. Kept in sync by the
+  // effect below; AI suggestion application writes it directly.
+  const editingModeRef = useRef<EditingMode>("edit");
+  useEffect(() => {
+    editingModeRef.current = editingMode;
+  }, [editingMode]);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
   // Document text the suggester started from; null outside suggest mode.
   const [suggestionBase, setSuggestionBase] = useState<string | null>(null);
@@ -288,6 +329,26 @@ export const App: React.FC = () => {
     setSuggestionError(null);
     setSuggestionBase(null);
   }, []);
+
+  // Turns an AI answer for commentToPatch into a suggestion patch: the
+  // replacement covers the current selection, so suggestion mode records
+  // exactly that change for the author to accept or reject.
+  const handleAISuggestion = useCallback(
+    (text: string) => {
+      if (selection === null) return;
+      const base = content;
+      // The replacement goes through the editor transaction, so the
+      // content change surfaces through the normal change listener with
+      // the same origin as typed edits. Suggest mode must already be
+      // active for the listener to treat it as a proposal.
+      editingModeRef.current = "suggest";
+      setEditingMode("suggest");
+      setSuggestionBase(base);
+      editorRef.current?.replaceSelection(text);
+      setIsAIOpen(false);
+    },
+    [content, selection],
+  );
 
   // Passage deep link: scroll the editor to the linked line once the
   // document text is available.
@@ -417,9 +478,10 @@ export const App: React.FC = () => {
         setFileMetadata((prev) => (prev ? { ...prev, ...updated } : updated));
         lastSyncedContentRef.current = content;
       } else {
-        // Save draft locally
-        localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, content);
-        localStorage.setItem(LOCAL_STORAGE_TITLE_KEY, documentTitle);
+        // Draft mode: the content and title change handlers already
+        // keep the local cache current, so re-writing the restored
+        // values here would only copy storage-read data back into
+        // browser storage.
       }
       setSaveStatus("saved");
     } catch (err) {
@@ -669,7 +731,7 @@ export const App: React.FC = () => {
 
     // In suggestion mode the edit is a proposal: keep it in the editor
     // only, never in the draft cache or the autosave pipeline.
-    if (editingMode === "suggest") return;
+    if (editingModeRef.current === "suggest") return;
 
     setSaveStatus("unsaved");
     try {
@@ -1184,6 +1246,9 @@ export const App: React.FC = () => {
         onToggleRichView={() =>
           setSettings((prev) => ({ ...prev, richView: !prev.richView }))
         }
+        aiEnabled={settings.ai.enabled && AI_BUILD_ENABLED}
+        isAIOpen={isAIOpen}
+        onToggleAI={() => setIsAIOpen((open) => !open)}
         isOutlineOpen={isOutlineOpen}
         onOpenHistory={handleOpenHistory}
         isHistoryOpen={isHistoryOpen}
@@ -1352,6 +1417,22 @@ export const App: React.FC = () => {
             )}
           </button>
         )}
+
+        {/* AI assistant panel; only mounted when the build allows it */}
+        <AIPanel
+          isOpen={isAIOpen && AI_BUILD_ENABLED}
+          onClose={() => setIsAIOpen(false)}
+          settings={settings.ai}
+          context={{
+            document: content,
+            selection: selection?.text ?? null,
+            commentThreads: aiThreadSnippets,
+            previousRevision: historySelectedContent,
+          }}
+          onInsertAtCursor={(text) => editorRef.current?.replaceSelection(text)}
+          onReplaceDocument={(text) => editorRef.current?.replaceDocument(text)}
+          onApplySuggestion={handleAISuggestion}
+        />
 
         {/* Google Drive Comments Sidebar Drawer */}
         <CommentsSidebar

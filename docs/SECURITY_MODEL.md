@@ -51,6 +51,33 @@ no browser renderer and stays reserved for the optional companion service
 rather than a third-party endpoint; documents show the fenced source until
 then.
 
+### AI assistant (opt-in)
+
+The Gemini assistant is the first feature that sends document content to a
+party other than Google. It follows three rules:
+
+1. Off by default. The toggle sits in settings and ships disabled.
+2. Compiled out by default. The production artifact is built without
+   `VITE_ENABLE_AI`, so neither the panel nor the service calls are in the
+   bundle. A self-hoster builds with `VITE_ENABLE_AI=1` to include it.
+3. Only the configured endpoint sees content. The panel states this before
+   the first run.
+
+Connection modes:
+
+| Mode      | Endpoint                                                                          | Key location                                          |
+| --------- | --------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| apiKey    | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | Browser local storage, visible to any injected script |
+| firebase  | A self-hosted Firebase AI Logic proxy URL the operator configures                 | None in this client                                   |
+| companion | `{companionBaseUrl}/v1/ai/generate` on the optional companion service             | Server side                                           |
+
+The firebase and companion modes accept the same JSON request and response
+shape as the Gemini `generateContent` REST call (`contents` with parts,
+response `candidates[0].content.parts[].text`), so a proxy can forward
+verbatim. Keys entered for the apiKey mode are stored in browser local
+storage next to the OAuth client ID and are never logged or sent anywhere
+except the Google endpoint above.
+
 Self-hosters should review these endpoints, Content Security Policy, proxy
 rules, and privacy requirements before production deployment.
 

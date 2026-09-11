@@ -200,7 +200,24 @@ Select the export button in the header.
 
 Choose Markdown for future editing, HTML for easy sharing, and PDF for a fixed review or archive copy.
 
-Styled HTML uses public CDN stylesheets for KaTeX and code highlighting when the exported file is opened.
+Styled HTML is self-contained: math, code highlighting, and fonts are inlined as data, so the exported file makes no outbound requests.
+
+## AI assistant (optional)
+
+When your deployment builds with the assistant included, a sparkle button in
+the header opens the assistant panel. It stays off until you enable it in
+settings and pick a connection mode (a Google AI Studio key, a self-hosted
+proxy, or the companion service).
+
+The panel states it plainly: whatever you run is sent to the configured AI
+provider along with the text it needs. Commands cover drafting, rewriting,
+shortening, grammar, English/Polish translation, document and discussion
+summaries, tables and Mermaid diagrams from descriptions, questions about
+the open document, a changelog between two versions, and addressing a
+reviewer comment as a suggested patch you can accept in one click.
+
+Results can be inserted at the cursor, replace the document, or go to the
+clipboard. In builds without the assistant, the button never appears.
 
 ## Settings
 
@@ -210,6 +227,8 @@ The settings dialog controls:
 - auto-save delay;
 - editor font size;
 - synchronized scrolling;
+- interface language;
+- the optional AI assistant, when the build includes it;
 
 The OAuth client ID is normally supplied by the deployment environment. Manual entry is useful for development or testing.
 
