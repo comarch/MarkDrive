@@ -18,6 +18,41 @@ Browser
 The deployment host serves compiled static files. Google receives OAuth and
 Drive requests directly from the browser.
 
+### Optional companion service
+
+An organization may deploy the optional, self-hosted companion service
+(`companion/`, distributed as a container) next to the SPA. It provides
+exactly four capabilities, each disabled unless configured:
+
+| Capability     | Route                                 | Configuration                        |
+| -------------- | ------------------------------------- | ------------------------------------ |
+| CRDT relay     | `/ws?room=<fileId>`                   | none (always on)                     |
+| Drive webhooks | `/v1/drive/watch`, `/v1/drive/notify` | `PUBLIC_URL`, `DRIVE_WEBHOOK_SECRET` |
+| AI proxy       | `/v1/ai/generate`                     | `GEMINI_API_KEY`                     |
+| Search index   | `/v1/search`, `/v1/search/index`      | `SEARCH_INDEX_PATH` (optional)       |
+| Integrations   | `/v1/integrations/notify`             | `SLACK_WEBHOOK_URL`                  |
+
+Trust rules for the companion:
+
+- The SPA never requires it. A deployment without the companion serves
+  every P0 and P1 feature; depending on it for core behavior is a
+  release-blocking rule, not a preference.
+- The client supplies its own short-lived OAuth access token when
+  registering a Drive watch; the companion never persists tokens.
+- Drive webhook callbacks are accepted only with the shared
+  `DRIVE_WEBHOOK_SECRET` token header.
+- Relay documents live in memory only; Drive remains the durability
+  layer through client-side snapshots.
+- The search index stores document content outside Drive, which is why
+  it exists only in the organization's own deployment - never in a
+  MarkQuire-operated service.
+- The audit log (`/v1/audit/export`, JSONL, pruned by `RETENTION_DAYS`)
+  records what this service can see: relay joins, webhook receipts,
+  watch registrations, and integration deliveries.
+- Collaborative editing traffic rides the same origin through the nginx
+  `/ws`, `/events`, and `/v1/` proxies, so no additional CORS surface
+  opens.
+
 ## Data handling
 
 | Data                 | Production location                          | Local demo location     |

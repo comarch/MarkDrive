@@ -68,6 +68,8 @@ interface AppHeaderProps {
   aiEnabled: boolean;
   isAIOpen: boolean;
   onToggleAI: () => void;
+  /** Presence list from the collaborative session, when active. */
+  collabPeers?: Array<{ name: string; color: string }>;
   onOpenHistory?: () => void;
   isHistoryOpen?: boolean;
   onOpenProperties?: () => void;
@@ -108,6 +110,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   aiEnabled,
   isAIOpen,
   onToggleAI,
+  collabPeers = [],
   onOpenHistory,
   isHistoryOpen = false,
   onOpenProperties,
@@ -227,6 +230,30 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             >
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
+          )}
+
+          {/* Presence avatars from the collaborative session */}
+          {collabPeers.length > 0 && (
+            <div
+              className="flex items-center -space-x-1.5 ml-1"
+              title={t("collab.peers")}
+            >
+              {collabPeers.slice(0, 5).map((peer, index) => (
+                <span
+                  key={`${peer.name}-${index}`}
+                  title={peer.name}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white dark:border-slate-900"
+                  style={{ backgroundColor: peer.color }}
+                >
+                  {peer.name.slice(0, 1).toUpperCase()}
+                </span>
+              ))}
+              {collabPeers.length > 5 && (
+                <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900">
+                  +{collabPeers.length - 5}
+                </span>
+              )}
+            </div>
           )}
 
           {/* Save Status Indicator */}

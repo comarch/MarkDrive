@@ -96,7 +96,18 @@ export type StringKey =
   | "export.docx"
   | "export.docxDesc"
   | "export.gdocs"
-  | "export.gdocsDesc";
+  | "export.gdocsDesc"
+  | "search.unavailable"
+  | "search.none"
+  | "search.run"
+  | "search.placeholder"
+  | "search.title"
+  | "settings.companionHint"
+  | "settings.companion"
+  | "collab.dismiss"
+  | "collab.reload"
+  | "collab.changed"
+  | "collab.peers";
 
 interface CatalogueRow {
   en: string;
@@ -194,6 +205,17 @@ export.docx|Word document (.docx)|Dokument Word (.docx)
 export.docxDesc|Generated in the browser with headings, lists, tables, and links|Generowany w przeglądarce z nagłówkami, listami, tabelami i linkami
 export.gdocs|Google Docs (copy in Drive)|Google Docs (kopia na Dysku)
 export.gdocsDesc|Drive converts a copy of this Markdown into a Google Docs file|Dysk konwertuje kopię tego Markdownu na plik Google Docs
+collab.peers|Editing together now|Edytują teraz razem
+collab.changed|This document changed on Google Drive.|Ten dokument zmienił się na Google Drive.
+collab.reload|Reload from Drive|Wczytaj ponownie z Dysku
+collab.dismiss|Dismiss|Odrzuć
+settings.companion|Companion service URL (optional)|Adres usługi towarzyszącej (opcjonalnie)
+settings.companionHint|Enables co-editing, change notifications, organization search, and integrations when your deployment runs the companion.|Włącza współedycję, powiadomienia o zmianach, wyszukiwanie w organizacji i integracje, gdy Twoje wdrożenie uruchamia usługę towarzyszącą.
+search.title|Search the organization index|Szukaj w indeksie organizacji
+search.placeholder|Search across indexed documents...|Szukaj w zaindeksowanych dokumentach...
+search.run|Search|Szukaj
+search.none|No indexed documents matched.|Żaden zaindeksowany dokument nie pasuje.
+search.unavailable|The organization index is not reachable. Configure the companion service in settings.|Indeks organizacji jest nieosiągalny. Skonfiguruj usługę towarzyszącą w ustawieniach.
 `;
 
 const parseCatalogue = (raw: string): Record<StringKey, CatalogueRow> => {

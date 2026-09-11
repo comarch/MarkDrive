@@ -49,6 +49,19 @@ import {
   replayQueue as replayQueuedSaves,
   type OfflineSaveEntry,
 } from "./services/offlineQueue";
+import {
+  applyContentToText,
+  openCollabSession,
+  type CollabPeer,
+  type CollabSession,
+} from "./services/collab";
+import {
+  indexForSearch,
+  notifyIntegration,
+  openEventStream,
+  registerDriveWatch,
+  type CompanionEventStream,
+} from "./services/companion";
 import { AIPanel } from "./components/AI/AIPanel";
 import { commentsService } from "./services/googleComments";
 import {
@@ -61,7 +74,7 @@ import { toggleTaskLine } from "./utils/tasks";
 import { parseFrontmatter, updateFrontmatterField } from "./utils/frontmatter";
 import { REVIEW_STATUS_FIELD } from "./utils/reviewStatus";
 import { setLanguage, t } from "./i18n";
-import { Eye, PenLine } from "lucide-react";
+import { Eye, PenLine, CloudDownload } from "lucide-react";
 import { applyTableAction, type TableAction } from "./utils/tableUtils";
 import {
   generateTableOfContents,
@@ -108,6 +121,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   language: "en",
   richView: false,
   ai: defaultAISettings(),
+  companionUrl: "",
 };
 
 const LOCAL_STORAGE_CONTENT_KEY = "gdrive_md_last_content";
@@ -135,8 +149,65 @@ const toPersistableSettings = (
   templatesFolderId: value.templatesFolderId,
   language: value.language,
   richView: value.richView,
+  companionUrl: value.companionUrl,
   ai: { ...value.ai, apiKey: "" },
 });
+
+type DriveHeadState =
+  | { outcome: "clear" }
+  | { outcome: "adopted"; headRevisionId: string }
+  | { outcome: "conflict"; baseContent: string; remoteContent: string };
+
+/**
+ * Compares the Drive head revision with the one this session synced
+ * from. "adopted" means both sides hold the same merged text, so the
+ * new head is safe to take without a conflict dialog.
+ */
+const checkDriveHead = async (input: {
+  fileId: string;
+  knownHead: string | null | undefined;
+  content: string;
+  lastSynced: string;
+}): Promise<DriveHeadState> => {
+  if (!input.knownHead) return { outcome: "clear" };
+  let remoteHead: string | null = null;
+  try {
+    remoteHead = await driveService.fetchHeadRevisionId(input.fileId);
+  } catch {
+    // The revision check is best effort; the update call still
+    // reports hard failures.
+  }
+  if (remoteHead === null || remoteHead === input.knownHead) {
+    return { outcome: "clear" };
+  }
+  const remote = await driveService.getFile(input.fileId);
+  if (remote.content === input.content) {
+    return { outcome: "adopted", headRevisionId: remoteHead };
+  }
+  return {
+    outcome: "conflict",
+    baseContent: input.lastSynced,
+    remoteContent: remote.content,
+  };
+};
+
+/** Best-effort offline queue write; false means the caller should
+ * surface a save error instead. */
+const tryQueueOfflineSave = async (entry: {
+  fileId: string;
+  name: string;
+  content: string;
+  baseRevisionId: string | null;
+  baseContent: string;
+}): Promise<boolean> => {
+  try {
+    await enqueueSave({ ...entry, savedAt: new Date().toISOString() });
+    return true;
+  } catch (queueError) {
+    console.error("Offline queue write failed:", queueError);
+    return false;
+  }
+};
 
 export const App: React.FC = () => {
   // Application Settings
@@ -238,6 +309,17 @@ export const App: React.FC = () => {
   const [isPresentOpen, setIsPresentOpen] = useState(false);
   // AI assistant panel, feature-flagged by the build and the settings
   const [isAIOpen, setIsAIOpen] = useState(false);
+  // Collaborative editing (optional companion relay)
+  const [collabPeers, setCollabPeers] = useState<CollabPeer[]>([]);
+  const [driveChangeNotice, setDriveChangeNotice] = useState(false);
+  const collabSessionRef = useRef<CollabSession | null>(null);
+  const collabEventStreamRef = useRef<CompanionEventStream | null>(null);
+  // Mirrors content for session lifecycle effects that must not re-run
+  // on every keystroke; updated in an effect, never during render.
+  const contentRef = useRef(content);
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
   // Passage deep link (#line=N), parsed once on mount.
   const [lineAnchor] = useState<number | null>(() => parseLineAnchorFromUrl());
   const lineAnchorAppliedRef = useRef(false);
@@ -267,6 +349,65 @@ export const App: React.FC = () => {
       fontSize: Math.max(12, prev.fontSize - 1),
     }));
   }, []);
+
+  // Collaborative editing over the optional companion relay. The session
+  // opens with the file and the companion URL; the Yjs text is the live
+  // editing truth, Drive stays the durability layer through autosave.
+  const companionUrl = settings.companionUrl.trim();
+  const collabFileId = fileMetadata?.id ?? null;
+  useEffect(() => {
+    if (!companionUrl || !collabFileId) return;
+    const author = {
+      name: user?.displayName?.trim() || "Guest author",
+    };
+    const session = openCollabSession(
+      companionUrl,
+      collabFileId,
+      author,
+      contentRef.current,
+      (peers) => setCollabPeers(peers),
+    );
+    collabSessionRef.current = session;
+
+    // Remote edits flow into the app content state; the editor syncs
+    // from it through the usual value effect.
+    const observer = () => {
+      const next = session.text.toString();
+      if (next !== contentRef.current) setContent(next);
+    };
+    session.text.observe(observer);
+
+    // Drive change notifications (item 28): the companion pushes
+    // webhook events into the event stream for this room.
+    const stream = openEventStream(companionUrl, collabFileId, () => {
+      setDriveChangeNotice(true);
+    });
+    collabEventStreamRef.current = stream;
+
+    // Register a Drive watch through the companion with this session's
+    // token. Demo tokens are never sent; the event stream still works.
+    const token = authService.getAccessToken();
+    if (token && !token.startsWith("mock_google_token_")) {
+      void registerDriveWatch(companionUrl, collabFileId, token);
+    }
+
+    return () => {
+      session.text.unobserve(observer);
+      session.destroy();
+      collabSessionRef.current = null;
+      stream?.close();
+      collabEventStreamRef.current = null;
+      setCollabPeers([]);
+    };
+  }, [companionUrl, collabFileId, user?.displayName]);
+
+  // Local content changes (typing, patches, conflict merges) push into
+  // the shared text with a middle diff when a session is open.
+  useEffect(() => {
+    const session = collabSessionRef.current;
+    if (!session) return;
+    applyContentToText(session.text, content);
+  }, [content]);
 
   // AI assistant: open discussion threads as plain text for prompts.
   const aiThreadSnippets = useMemo(
@@ -332,7 +473,31 @@ export const App: React.FC = () => {
   const previewRef = useRef<MarkdownPreviewHandle>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Content last synced with Drive; acts as the base for conflict merges.
+  // Handlers update the state (compiler-safe); sync reads use the ref,
+  // which a dedicated effect keeps in step.
   const lastSyncedContentRef = useRef<string>(content);
+  const [lastSyncedContent, setLastSyncedContent] = useState(content);
+  useEffect(() => {
+    lastSyncedContentRef.current = lastSyncedContent;
+  }, [lastSyncedContent]);
+
+  // Reload the Drive version when the change notification banner says
+  // the document moved on. Unsaved local edits stay in the editor until
+  // saved; the reload is explicit, never silent.
+  const handleReloadFromDrive = useCallback(async () => {
+    if (!fileMetadata) return;
+    try {
+      const remote = await driveService.getFile(fileMetadata.id);
+      setFileMetadata(remote.metadata);
+      setContent(remote.content);
+      // The draft cache is not written here: the reloaded text comes
+      // straight from Drive, and the cache refreshes on the next edit.
+      setLastSyncedContent(remote.content);
+      setDriveChangeNotice(false);
+    } catch (err) {
+      console.error("Reload from Drive failed:", err);
+    }
+  }, [fileMetadata]);
   // Suppresses auto-save while the conflict dialog is open.
   const isConflictOpenRef = useRef(false);
   // Resolved cross-document links, cached per session folder and file name.
@@ -456,7 +621,7 @@ export const App: React.FC = () => {
           setFileMetadata(result.metadata);
           setDocumentTitle(result.metadata.name);
           setContent(result.content);
-          lastSyncedContentRef.current = result.content;
+          setLastSyncedContent(result.content);
           setSaveStatus("saved");
           updateUrlFileId(fileId);
           await loadComments(fileId);
@@ -470,7 +635,7 @@ export const App: React.FC = () => {
           setFileMetadata(created);
           setDocumentTitle(created.name);
           setContent(SAMPLE_MARKDOWN);
-          lastSyncedContentRef.current = SAMPLE_MARKDOWN;
+          setLastSyncedContent(SAMPLE_MARKDOWN);
           setSaveStatus("saved");
           updateUrlFileId(created.id);
           await loadComments(created.id);
@@ -488,67 +653,80 @@ export const App: React.FC = () => {
   const handleSaveDocument = useCallback(async () => {
     if (isConflictOpenRef.current) return; // resolve the open conflict first
     setSaveStatus("saving");
+
+    // Draft mode: the content and title change handlers already keep
+    // the local cache current, so re-writing the restored values here
+    // would only copy storage-read data back into browser storage.
+    if (!fileMetadata) {
+      setSaveStatus("saved");
+      return;
+    }
+
+    // Detect concurrent edits: compare the Drive head revision with the
+    // revision this session last synced from. Co-editing sessions save
+    // the same merged content from both sides; adopting the new head
+    // instead of opening a dialog is what lets two authors edit without
+    // conflict dialogs.
+    const headState = await checkDriveHead({
+      fileId: fileMetadata.id,
+      knownHead: fileMetadata.headRevisionId,
+      content,
+      lastSynced: lastSyncedContentRef.current,
+    });
+    if (headState.outcome === "conflict") {
+      setConflict({
+        baseContent: headState.baseContent,
+        remoteContent: headState.remoteContent,
+      });
+      isConflictOpenRef.current = true;
+      setSaveStatus("unsaved");
+      return;
+    }
+    if (headState.outcome === "adopted") {
+      setFileMetadata((prev) =>
+        prev ? { ...prev, headRevisionId: headState.headRevisionId } : prev,
+      );
+    }
+
     try {
-      if (fileMetadata) {
-        // Detect concurrent edits: compare the Drive head revision with the
-        // revision this session last synced from.
-        const knownHead = fileMetadata.headRevisionId;
-        let remoteHead: string | null = null;
-        try {
-          remoteHead = await driveService.fetchHeadRevisionId(fileMetadata.id);
-        } catch {
-          // The revision check is best effort; the update call still reports
-          // hard failures.
-        }
-        if (knownHead && remoteHead && knownHead !== remoteHead) {
-          const remote = await driveService.getFile(fileMetadata.id);
-          setConflict({
-            baseContent: lastSyncedContentRef.current,
-            remoteContent: remote.content,
-          });
-          isConflictOpenRef.current = true;
-          setSaveStatus("unsaved");
-          return;
-        }
-        const updated = await driveService.updateFile(
-          fileMetadata.id,
+      const updated = await driveService.updateFile(
+        fileMetadata.id,
+        content,
+        documentTitle,
+      );
+      // Merge instead of replace: update responses omit fields like
+      // parents, and losing them would misplace later image uploads.
+      setFileMetadata((prev) => (prev ? { ...prev, ...updated } : updated));
+      setLastSyncedContent(content);
+      // Best effort: keep the organization search index fresh.
+      if (companionUrl) {
+        void indexForSearch(companionUrl, {
+          fileId: fileMetadata.id,
+          name: documentTitle,
           content,
-          documentTitle,
-        );
-        // Merge instead of replace: update responses omit fields like
-        // parents, and losing them would misplace later image uploads.
-        setFileMetadata((prev) => (prev ? { ...prev, ...updated } : updated));
-        lastSyncedContentRef.current = content;
-      } else {
-        // Draft mode: the content and title change handlers already
-        // keep the local cache current, so re-writing the restored
-        // values here would only copy storage-read data back into
-        // browser storage.
+        });
       }
       setSaveStatus("saved");
     } catch (err) {
       console.error("Save failed:", err);
       // Offline: queue the save and replay it on reconnect instead of
       // surfacing a hard error the user cannot act on.
-      if (fileMetadata && isNetworkError(err)) {
-        try {
-          await enqueueSave({
+      const queued = isNetworkError(err)
+        ? await tryQueueOfflineSave({
             fileId: fileMetadata.id,
             name: documentTitle,
             content,
             baseRevisionId: fileMetadata.headRevisionId ?? null,
             baseContent: lastSyncedContentRef.current,
-            savedAt: new Date().toISOString(),
-          });
-          setSaveStatus("offline");
-          return;
-        } catch (queueError) {
-          console.error("Offline queue write failed:", queueError);
-        }
+          })
+        : false;
+      if (queued) {
+        setSaveStatus("offline");
+        return;
       }
       setSaveStatus("error");
     }
-  }, [content, documentTitle, fileMetadata]);
+  }, [companionUrl, content, documentTitle, fileMetadata]);
 
   // Replays queued offline saves when the network returns. The first
   // conflict opens the merge dialog; the rest stay queued.
@@ -577,7 +755,7 @@ export const App: React.FC = () => {
           setFileMetadata((prev) =>
             prev ? { ...prev, ...updated.metadata } : updated.metadata,
           );
-          lastSyncedContentRef.current = updated.content;
+          setLastSyncedContent(updated.content);
         }
         setSaveStatus("saved");
       }
@@ -638,7 +816,7 @@ export const App: React.FC = () => {
         setFileMetadata((prev) => (prev ? { ...prev, ...updated } : updated));
         setContent(resolvedContent);
         localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, resolvedContent);
-        lastSyncedContentRef.current = resolvedContent;
+        setLastSyncedContent(resolvedContent);
         setSaveStatus("saved");
       } catch (err) {
         console.error("Failed to save merged content:", err);
@@ -731,7 +909,7 @@ export const App: React.FC = () => {
         setContent(restored.content);
         // The local draft cache is not written here: the restored text comes
         // straight from Drive, and the cache refreshes on the next edit.
-        lastSyncedContentRef.current = restored.content;
+        setLastSyncedContent(restored.content);
         setSaveStatus("saved");
         await loadHistory(fileMetadata.id);
         setHistorySelectedId(null);
@@ -787,9 +965,9 @@ export const App: React.FC = () => {
         setFileMetadata(result.metadata);
         setDocumentTitle(result.metadata.name);
         setContent(result.content);
-        lastSyncedContentRef.current = result.content;
         // The draft cache is not written here: opened Drive content stays out
         // of local storage until the user edits, which refreshes the cache.
+        setLastSyncedContent(result.content);
         setSaveStatus("saved");
         setIsFileBrowserOpen(false);
         updateUrlFileId(fileId);
@@ -1040,7 +1218,7 @@ export const App: React.FC = () => {
       setFileMetadata(newFile);
       setDocumentTitle(newFile.name);
       setContent("# Untitled Document\n\n");
-      lastSyncedContentRef.current = "# Untitled Document\n\n";
+      setLastSyncedContent("# Untitled Document\n\n");
       setSaveStatus("saved");
       updateUrlFileId(newFile.id);
       await loadComments(newFile.id);
@@ -1081,7 +1259,7 @@ export const App: React.FC = () => {
       setFileMetadata(newFile);
       setDocumentTitle(newFile.name);
       setContent(expanded);
-      lastSyncedContentRef.current = expanded;
+      setLastSyncedContent(expanded);
       localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, expanded);
       setSaveStatus("saved");
       updateUrlFileId(newFile.id);
@@ -1139,6 +1317,17 @@ export const App: React.FC = () => {
   };
 
   // Comments Handlers
+  // Review activity reaches the tools the team already watches (item
+  // 30), best effort through the companion when it is configured.
+  const notifyReviewActivity = (event: string, text: string) => {
+    if (!companionUrl || !fileMetadata?.id) return;
+    void notifyIntegration(companionUrl, {
+      event,
+      fileId: fileMetadata.id,
+      text: `${documentTitle}: ${text}`,
+    });
+  };
+
   const handleCreateComment = async (
     commentText: string,
     quotedText?: string,
@@ -1154,6 +1343,10 @@ export const App: React.FC = () => {
     setComments((prev) => [newComment, ...prev]);
     setIsCommentsOpen(true);
     setSelectedCommentId(newComment.id);
+    notifyReviewActivity(
+      "review.comment",
+      commentText.slice(0, 200) || "new comment",
+    );
   };
 
   const handleReplyComment = async (commentId: string, replyText: string) => {
@@ -1183,6 +1376,7 @@ export const App: React.FC = () => {
     setComments((prev) =>
       prev.map((c) => (c.id === commentId ? { ...c, resolved: true } : c)),
     );
+    notifyReviewActivity("review.resolved", "a discussion was resolved");
   };
 
   const handleReopenComment = async (commentId: string) => {
@@ -1371,6 +1565,7 @@ export const App: React.FC = () => {
           setSettings((prev) => ({ ...prev, richView: !prev.richView }))
         }
         aiEnabled={settings.ai.enabled && AI_BUILD_ENABLED}
+        collabPeers={collabPeers}
         isAIOpen={isAIOpen}
         onToggleAI={() => setIsAIOpen((open) => !open)}
         isOutlineOpen={isOutlineOpen}
@@ -1384,6 +1579,30 @@ export const App: React.FC = () => {
         onSignIn={() => authService.signIn()}
         onSignOut={() => authService.signOut()}
       />
+
+      {/* Drive change notification banner (companion webhooks) */}
+      {driveChangeNotice && (
+        <div className="flex items-center justify-between gap-3 px-4 py-1.5 bg-sky-50 dark:bg-sky-950/30 border-b border-sky-200 dark:border-sky-900 text-xs no-print">
+          <div className="flex items-center gap-2 text-sky-800 dark:text-sky-200">
+            <CloudDownload className="w-3.5 h-3.5 shrink-0" />
+            <span>{t("collab.changed")}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => void handleReloadFromDrive()}
+              className="px-2.5 py-1 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-medium"
+            >
+              {t("collab.reload")}
+            </button>
+            <button
+              onClick={() => setDriveChangeNotice(false)}
+              className="px-2.5 py-1 rounded-md border border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300 text-[11px] font-medium hover:bg-sky-100 dark:hover:bg-sky-900/40"
+            >
+              {t("collab.dismiss")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Suggestion mode banner: edits are recorded, not saved */}
       {editingMode === "suggest" && (
@@ -1621,6 +1840,7 @@ export const App: React.FC = () => {
         error={fileBrowserError}
         onSelect={handleOpenFile}
         onRefresh={loadFileList}
+        companionUrl={companionUrl || undefined}
       />
 
       {/* Frontmatter Properties Panel */}

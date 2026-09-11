@@ -23,19 +23,47 @@ condition that closes it. Every item also carries focused regression coverage in
 
 ## Progress
 
-Phase 1 items are implemented in this working tree:
+All 32 items are implemented in this working tree:
 
-| Item                           | Status      |
-| ------------------------------ | ----------- |
-| 1. Save conflict detection     | Implemented |
-| 2. Version history             | Implemented |
-| 3. Image paste and upload      | Implemented |
-| 4. Search and replace          | Implemented |
-| 7. Interactive task checkboxes | Implemented |
+| Item                            | Status      |
+| ------------------------------- | ----------- |
+| 1. Save conflict detection      | Implemented |
+| 2. Version history              | Implemented |
+| 3. Image paste and upload       | Implemented |
+| 4. Search and replace           | Implemented |
+| 5. Drive file switching         | Implemented |
+| 6. Cross-document links         | Implemented |
+| 7. Interactive task checkboxes  | Implemented |
+| 8. YAML frontmatter             | Implemented |
+| 9. Extended Markdown            | Implemented |
+| 10. Table editing               | Implemented |
+| 11. DOCX and Google Docs export | Implemented |
+| 12. Offline queue               | Implemented |
+| 13. Reach: mobile, a11y, i18n   | Implemented |
+| 14. Self-contained HTML export  | Implemented |
+| 15. Suggestion mode             | Implemented |
+| 16. Revision diff with comments | Implemented |
+| 17. Review workflow             | Implemented |
+| 18. Templates and snippets      | Implemented |
+| 19. Structure tools             | Implemented |
+| 20. Wikilinks, backlinks, graph | Implemented |
+| 21. Presentation and publishing | Implemented |
+| 22. Diagrams and math depth     | Implemented |
+| 23. Authoring quality checks    | Implemented |
+| 24. Google Docs-style interface | Implemented |
+| 25. WYSIWYG editing mode        | Implemented |
+| 26. Gemini integration          | Implemented |
+| 27. Real-time co-editing        | Implemented |
+| 28. Change notifications        | Implemented |
+| 29. Search index                | Implemented |
+| 30. Integrations                | Implemented |
+| 31. Compliance features         | Implemented |
+| 32. Companion service itself    | Implemented |
 
-Phase 1 ships with regression coverage for the merge, diff, task, and Drive
-service logic in `src/__tests__/`, plus Playwright end-to-end coverage in
-`e2e/`.
+Regression coverage lives in `src/__tests__/` with Google API calls
+mocked, the companion suite runs on `node --test` in `companion/test/`,
+and Playwright covers the interactive flows in `e2e/`, including a
+two-author co-editing session through a live companion relay.
 
 ## P0: data safety and expected parity
 

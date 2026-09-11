@@ -19,8 +19,9 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    // Playwright owns e2e/*.spec.ts; Vitest must not load those files.
-    exclude: [...configDefaults.exclude, "e2e/**"],
+    // Playwright owns e2e/*.spec.ts and node --test owns the companion
+    // suite; Vitest must not load either.
+    exclude: [...configDefaults.exclude, "e2e/**", "companion/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],

@@ -42,6 +42,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     settings.ai.companionBaseUrl,
   );
   const [aiModel, setAIModel] = useState(settings.ai.model);
+  const [companionUrl, setCompanionUrl] = useState(settings.companionUrl);
 
   if (!isOpen) return null;
 
@@ -66,13 +67,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         companionBaseUrl: aiCompanionUrl.trim(),
         model: aiModel.trim() || DEFAULT_AI_MODEL,
       },
+      companionUrl: companionUrl.trim(),
     });
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60">
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 text-brand-600 dark:text-brand-400" />
@@ -88,7 +90,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="p-6 flex flex-col gap-5">
+        <form
+          onSubmit={handleSave}
+          className="p-6 flex flex-col gap-5 overflow-y-auto"
+        >
           {/* Google OAuth Client ID */}
           <div>
             <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 mb-1.5">
@@ -301,6 +306,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               )}
             </div>
           )}
+
+          <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+          {/* Optional companion service */}
+          <div>
+            <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 block mb-1.5">
+              {t("settings.companion")}
+            </label>
+            <input
+              type="url"
+              value={companionUrl}
+              onChange={(e) => setCompanionUrl(e.target.value)}
+              placeholder="https://"
+              aria-label={t("settings.companion")}
+              className="w-full text-xs font-mono p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+            />
+            <div className="mt-1.5 flex items-start gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+              <HelpCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
+              <span>{t("settings.companionHint")}</span>
+            </div>
+          </div>
 
           <div className="h-px bg-slate-100 dark:bg-slate-800" />
 

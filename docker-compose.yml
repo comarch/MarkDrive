@@ -1,0 +1,32 @@
+# Optional full deployment: the SPA behind nginx and the companion
+# service next to it, off unless configured. Without the companion the
+# SPA still serves every P0 and P1 feature.
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    depends_on:
+      - companion
+    restart: unless-stopped
+
+  companion:
+    build: ./companion
+    environment:
+      # Public HTTPS base Drive calls back into. Change to your domain
+      # and TLS terminator before enabling webhooks.
+      PUBLIC_URL: "${PUBLIC_URL:-}"
+      DRIVE_WEBHOOK_SECRET: "${DRIVE_WEBHOOK_SECRET:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      GEMINI_MODEL: "${GEMINI_MODEL:-gemini-2.0-flash}"
+      SLACK_WEBHOOK_URL: "${SLACK_WEBHOOK_URL:-}"
+      AUDIT_LOG_PATH: "/data/audit.jsonl"
+      SEARCH_INDEX_PATH: "/data/search.jsonl"
+      RETENTION_DAYS: "${RETENTION_DAYS:-365}"
+    volumes:
+      - companion-data:/data
+    restart: unless-stopped
+
+volumes:
+  companion-data:
