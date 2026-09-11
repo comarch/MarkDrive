@@ -17,8 +17,12 @@ import {
   AlertCircle,
   Loader2,
   ExternalLink,
+  PenLine,
+  FilePen,
 } from "lucide-react";
 import { DriveUser, SaveStatus, DriveFileMetadata } from "../../types/drive";
+
+export type EditingMode = "edit" | "suggest";
 
 // Brand assets live in the public directory, so they follow the deployment base
 // path instead of the site root.
@@ -29,6 +33,8 @@ interface AppHeaderProps {
   documentTitle: string;
   onChangeTitle: (title: string) => void;
   saveStatus: SaveStatus;
+  editingMode: EditingMode;
+  onChangeEditingMode: (mode: EditingMode) => void;
   user: DriveUser | null;
   fileMetadata: DriveFileMetadata | null;
   isDark: boolean;
@@ -54,6 +60,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   documentTitle,
   onChangeTitle,
   saveStatus,
+  editingMode,
+  onChangeEditingMode,
   user,
   fileMetadata,
   isDark,
@@ -200,6 +208,40 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             )}
           </div>
         </div>
+      </div>
+
+      {/* Editing mode switch: direct edits or recorded suggestions */}
+      <div
+        className="hidden md:flex items-center rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 gap-0.5"
+        role="radiogroup"
+        aria-label="Editing mode"
+      >
+        <button
+          onClick={() => onChangeEditingMode("edit")}
+          title="Edit the document directly"
+          aria-pressed={editingMode === "edit"}
+          className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition ${
+            editingMode === "edit"
+              ? "bg-brand-600 text-white"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+          }`}
+        >
+          <PenLine className="w-3.5 h-3.5" />
+          <span>Edit</span>
+        </button>
+        <button
+          onClick={() => onChangeEditingMode("suggest")}
+          title="Record changes as suggestions for review"
+          aria-pressed={editingMode === "suggest"}
+          className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition ${
+            editingMode === "suggest"
+              ? "bg-amber-500 text-white"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+          }`}
+        >
+          <FilePen className="w-3.5 h-3.5" />
+          <span>Suggest</span>
+        </button>
       </div>
 
       {/* Right Actions Toolbar */}

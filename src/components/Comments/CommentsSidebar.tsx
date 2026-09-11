@@ -14,6 +14,12 @@ interface CommentsSidebarProps {
   onReopenComment: (commentId: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
   onOpenNewComment: () => void;
+  onAcceptSuggestionHunk?: (
+    commentId: string,
+    hunkId: string,
+  ) => Promise<"applied" | "unresolvable">;
+  onAcceptAllSuggestions?: (commentId: string) => Promise<void>;
+  onRejectSuggestion?: (commentId: string) => Promise<void>;
 }
 
 type FilterTab = "open" | "resolved" | "all";
@@ -29,6 +35,9 @@ export const CommentsSidebar: React.FC<CommentsSidebarProps> = ({
   onReopenComment,
   onDeleteComment,
   onOpenNewComment,
+  onAcceptSuggestionHunk,
+  onAcceptAllSuggestions,
+  onRejectSuggestion,
 }) => {
   const [filter, setFilter] = useState<FilterTab>("open");
 
@@ -136,6 +145,9 @@ export const CommentsSidebar: React.FC<CommentsSidebarProps> = ({
               onResolve={onResolveComment}
               onReopen={onReopenComment}
               onDelete={onDeleteComment}
+              onAcceptSuggestionHunk={onAcceptSuggestionHunk}
+              onAcceptAllSuggestions={onAcceptAllSuggestions}
+              onRejectSuggestion={onRejectSuggestion}
             />
           ))
         )}

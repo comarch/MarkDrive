@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { AppHeader } from "./components/Header/AppHeader";
+import { AppHeader, type EditingMode } from "./components/Header/AppHeader";
 import { EditorToolbar } from "./components/Editor/EditorToolbar";
 import {
   CodeMirrorEditor,
@@ -37,6 +37,12 @@ import { SAMPLE_MARKDOWN } from "./utils/sampleDocument";
 import { toggleTaskLine } from "./utils/tasks";
 import { parseFrontmatter, updateFrontmatterField } from "./utils/frontmatter";
 import { applyTableAction, type TableAction } from "./utils/tableUtils";
+import {
+  applySuggestionHunks,
+  buildSuggestionHunks,
+  parseSuggestions,
+  serializeSuggestions,
+} from "./utils/patch";
 import type { TableCursorContext } from "./components/Editor/CodeMirrorEditor";
 
 import {
@@ -158,6 +164,12 @@ export const App: React.FC = () => {
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("split");
 
+  // Suggestion mode: edits are recorded as a patch, not written to Drive.
+  const [editingMode, setEditingMode] = useState<EditingMode>("edit");
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
+  // Document text the suggester started from; null outside suggest mode.
+  const [suggestionBase, setSuggestionBase] = useState<string | null>(null);
+
   // Component Refs
   const editorRef = useRef<CodeMirrorEditorHandle>(null);
   const previewRef = useRef<MarkdownPreviewHandle>(null);
@@ -168,6 +180,14 @@ export const App: React.FC = () => {
   const isConflictOpenRef = useRef(false);
   // Resolved cross-document links, cached per session folder and file name.
   const docLinkCacheRef = useRef(new Map<string, string | null>());
+
+  // Leaves suggestion mode without a dialog when the document is about to
+  // be replaced wholesale (open, restore, conflict, new document).
+  const exitSuggestModeSilently = useCallback(() => {
+    setEditingMode("edit");
+    setSuggestionError(null);
+    setSuggestionBase(null);
+  }, []);
 
   // Sync theme with DOM
   useEffect(() => {
@@ -310,6 +330,7 @@ export const App: React.FC = () => {
   const handleResolveConflict = useCallback(
     async (resolvedContent: string) => {
       if (!fileMetadata) return;
+      exitSuggestModeSilently();
       setConflict(null);
       isConflictOpenRef.current = false;
       setSaveStatus("saving");
@@ -329,7 +350,7 @@ export const App: React.FC = () => {
         setSaveStatus("error");
       }
     },
-    [documentTitle, fileMetadata],
+    [documentTitle, exitSuggestModeSilently, fileMetadata],
   );
 
   // Dismiss the conflict dialog without saving
@@ -402,6 +423,8 @@ export const App: React.FC = () => {
         );
         if (!confirmRestore) return;
       }
+      // Restoring replaces the document; pending suggestions cannot apply.
+      exitSuggestModeSilently();
       try {
         // restoreRevision writes the selected content to Drive as a new
         // revision, then we mirror it locally.
@@ -423,7 +446,13 @@ export const App: React.FC = () => {
         setHistoryError(err instanceof Error ? err.message : "Unknown error");
       }
     },
-    [fileMetadata, historyRevisions, loadHistory, saveStatus],
+    [
+      exitSuggestModeSilently,
+      fileMetadata,
+      historyRevisions,
+      loadHistory,
+      saveStatus,
+    ],
   );
 
   // Load the recent Markdown file list
@@ -455,6 +484,8 @@ export const App: React.FC = () => {
         );
         if (!confirmSwitch) return;
       }
+      // The new document replaces the text; suggestions do not carry over.
+      exitSuggestModeSilently();
       setSaveStatus("saving");
       try {
         const result = await driveService.getFile(fileId);
@@ -475,7 +506,7 @@ export const App: React.FC = () => {
         setSaveStatus("error");
       }
     },
-    [loadComments, saveStatus],
+    [exitSuggestModeSilently, loadComments, saveStatus],
   );
 
   // Resolve a relative Markdown link against the document's Drive folder
@@ -515,6 +546,11 @@ export const App: React.FC = () => {
   // Handle document content change & auto-save
   const handleContentChange = (newContent: string) => {
     setContent(newContent);
+
+    // In suggestion mode the edit is a proposal: keep it in the editor
+    // only, never in the draft cache or the autosave pipeline.
+    if (editingMode === "suggest") return;
+
     setSaveStatus("unsaved");
     try {
       localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, newContent);
@@ -529,6 +565,132 @@ export const App: React.FC = () => {
       autoSaveTimerRef.current = setTimeout(() => {
         saveDocumentRef.current();
       }, settings.autoSaveIntervalMs);
+    }
+  };
+
+  // Pending suggestion hunks, shown in the suggestion banner.
+  const pendingSuggestionHunks = useMemo(
+    () =>
+      editingMode === "suggest" && suggestionBase !== null
+        ? buildSuggestionHunks(suggestionBase, content)
+        : [],
+    [editingMode, suggestionBase, content],
+  );
+
+  const handleEditingModeChange = (mode: EditingMode) => {
+    if (mode === editingMode) return;
+
+    if (mode === "suggest") {
+      // A pending autosave must not fire while suggestions accumulate.
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      setSuggestionBase(content);
+      setSuggestionError(null);
+      setEditingMode("suggest");
+      return;
+    }
+
+    const hasPending = suggestionBase !== null && content !== suggestionBase;
+    if (hasPending && suggestionBase !== null) {
+      const confirmDiscard = window.confirm(
+        "Discard unsubmitted suggestions and return to direct editing?",
+      );
+      if (!confirmDiscard) return;
+      setContent(suggestionBase);
+    }
+    exitSuggestModeSilently();
+  };
+
+  const handleSubmitSuggestions = async () => {
+    if (suggestionBase === null) return;
+    const hunks = buildSuggestionHunks(suggestionBase, content);
+    if (hunks.length === 0) {
+      exitSuggestModeSilently();
+      return;
+    }
+
+    const firstHunk = hunks[0];
+    const quotedText =
+      firstHunk && firstHunk.contextBefore.length > 0
+        ? firstHunk.contextBefore[firstHunk.contextBefore.length - 1]
+        : undefined;
+    const anchorLine = firstHunk ? firstHunk.anchorLine + 1 : undefined;
+
+    const fileId = fileMetadata?.id || "local_draft";
+    try {
+      const newComment = await commentsService.createComment(
+        fileId,
+        serializeSuggestions(hunks),
+        quotedText,
+        anchorLine,
+      );
+      setComments((prev) => [newComment, ...prev]);
+      setContent(suggestionBase);
+      exitSuggestModeSilently();
+      setIsCommentsOpen(true);
+      setSelectedCommentId(newComment.id);
+    } catch (err) {
+      console.error("Failed to submit suggestions:", err);
+      setSuggestionError(
+        "Submitting suggestions failed. Check your connection and try again.",
+      );
+    }
+  };
+
+  const handleDiscardSuggestions = () => {
+    if (suggestionBase !== null) setContent(suggestionBase);
+    exitSuggestModeSilently();
+  };
+
+  // Applies one hunk from a suggestion comment to the live document.
+  const handleAcceptSuggestionHunk = async (
+    commentId: string,
+    hunkId: string,
+  ): Promise<"applied" | "unresolvable"> => {
+    const comment = comments.find((c) => c.id === commentId);
+    const hunks = comment ? parseSuggestions(comment.content) : null;
+    const hunk = hunks?.find((h) => h.id === hunkId);
+    if (!hunk) return "unresolvable";
+
+    const result = applySuggestionHunks(content, [hunk]);
+    const status = result.results[0]?.status ?? "unresolvable";
+    if (status === "applied") {
+      handleContentChange(result.content);
+    }
+    return status;
+  };
+
+  const handleAcceptAllSuggestions = async (commentId: string) => {
+    const comment = comments.find((c) => c.id === commentId);
+    const hunks = comment ? parseSuggestions(comment.content) : null;
+    if (!hunks || hunks.length === 0) return;
+
+    const result = applySuggestionHunks(content, hunks);
+    if (result.results.some((r) => r.status === "applied")) {
+      handleContentChange(result.content);
+    }
+    if (result.results.every((r) => r.status === "applied")) {
+      await handleReplyComment(commentId, "Accepted all suggested changes");
+      await handleResolveComment(commentId);
+    }
+  };
+
+  const handleRejectSuggestion = async (commentId: string) => {
+    const fileId = fileMetadata?.id || "local_draft";
+    try {
+      await commentsService.createReply(
+        fileId,
+        commentId,
+        "Rejected suggestion",
+        "resolve",
+      );
+      setComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, resolved: true } : c)),
+      );
+    } catch (err) {
+      console.error("Failed to reject suggestion:", err);
     }
   };
 
@@ -561,6 +723,7 @@ export const App: React.FC = () => {
       );
       if (!confirmNew) return;
     }
+    exitSuggestModeSilently();
 
     try {
       setSaveStatus("saving");
@@ -755,6 +918,8 @@ export const App: React.FC = () => {
         documentTitle={documentTitle}
         onChangeTitle={handleTitleChange}
         saveStatus={saveStatus}
+        editingMode={editingMode}
+        onChangeEditingMode={handleEditingModeChange}
         user={user}
         fileMetadata={fileMetadata}
         isDark={isDark}
@@ -775,6 +940,45 @@ export const App: React.FC = () => {
         onSignIn={() => authService.signIn()}
         onSignOut={() => authService.signOut()}
       />
+
+      {/* Suggestion mode banner: edits are recorded, not saved */}
+      {editingMode === "suggest" && (
+        <div className="flex items-center justify-between gap-3 px-4 py-1.5 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-900 text-xs no-print">
+          <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+            <span className="font-medium">Suggesting.</span>
+            <span className="hidden sm:inline">
+              Edits are recorded as suggestions for review, not written to
+              Drive.
+            </span>
+            <span>
+              {pendingSuggestionHunks.length} pending change
+              {pendingSuggestionHunks.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDiscardSuggestions}
+              className="px-2.5 py-1 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium transition"
+            >
+              Discard
+            </button>
+            <button
+              onClick={() => void handleSubmitSuggestions()}
+              disabled={pendingSuggestionHunks.length === 0}
+              className="px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-600 text-white font-medium disabled:opacity-50 transition"
+            >
+              Submit suggestions
+            </button>
+          </div>
+        </div>
+      )}
+
+      {editingMode === "suggest" && suggestionError && (
+        <div className="px-4 py-1.5 bg-rose-50 dark:bg-rose-950/30 border-b border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 no-print">
+          {suggestionError}
+        </div>
+      )}
 
       {/* Editor Toolbar */}
       <EditorToolbar
@@ -870,6 +1074,9 @@ export const App: React.FC = () => {
           onReopenComment={handleReopenComment}
           onDeleteComment={handleDeleteComment}
           onOpenNewComment={() => setIsNewCommentModalOpen(true)}
+          onAcceptSuggestionHunk={handleAcceptSuggestionHunk}
+          onAcceptAllSuggestions={handleAcceptAllSuggestions}
+          onRejectSuggestion={handleRejectSuggestion}
         />
 
         {/* Drive Version History Sidebar Drawer */}
