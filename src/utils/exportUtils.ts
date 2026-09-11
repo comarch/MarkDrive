@@ -1,4 +1,5 @@
 import { parseMarkdown } from "../components/Preview/markdownParser";
+import type { ExportStyles } from "./exportAssets";
 
 /**
  * Downloads a file to user's computer
@@ -24,21 +25,29 @@ export function exportAsMarkdown(filename: string, content: string) {
 }
 
 /**
- * Exports document as a styled HTML file with embedded layout styling
+ * Builds the self-contained HTML document. Styles are passed in so this
+ * stays a pure function that unit tests can check without Vite asset
+ * imports.
  */
-export function exportAsHtml(filename: string, markdownContent: string) {
-  const finalName = filename.replace(/\.md$/, "") + ".html";
+export function buildHtmlDocument(
+  filename: string,
+  markdownContent: string,
+  styles: ExportStyles,
+): string {
   const renderedContent = parseMarkdown(markdownContent);
 
-  const htmlDocument = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(filename)}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css">
   <style>
+${styles.highlightCss}
+  </style>
+  <style>
+${styles.katexCss}
+  </style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       line-height: 1.6;
@@ -66,6 +75,21 @@ export function exportAsHtml(filename: string, markdownContent: string) {
   ${renderedContent}
 </body>
 </html>`;
+}
+
+/**
+ * Exports document as a self-contained HTML file. Math and code styles,
+ * including KaTeX fonts, are inlined as data so the file works offline
+ * and without any external requests.
+ */
+export async function exportAsHtml(filename: string, markdownContent: string) {
+  const finalName = filename.replace(/\.md$/, "") + ".html";
+  const { exportStyles } = await import("./exportAssets");
+  const htmlDocument = buildHtmlDocument(
+    filename,
+    markdownContent,
+    exportStyles,
+  );
 
   const blob = new Blob([htmlDocument], { type: "text/html;charset=utf-8" });
   downloadBlob(blob, finalName);
