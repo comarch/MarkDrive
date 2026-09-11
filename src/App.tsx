@@ -91,6 +91,21 @@ const LOCAL_STORAGE_CONTENT_KEY = "gdrive_md_last_content";
 const LOCAL_STORAGE_TITLE_KEY = "gdrive_md_last_title";
 const LOCAL_STORAGE_SETTINGS_KEY = "gdrive_md_settings";
 
+/**
+ * Fields written to the settings cache on modal save. The header zoom
+ * controls stay session-only, so nothing they touch reaches storage.
+ * googleClientId stays out too: it has its own storage key in authService.
+ */
+const toPersistableSettings = (
+  value: AppSettings,
+): Omit<AppSettings, "googleClientId"> => ({
+  autoSaveIntervalMs: value.autoSaveIntervalMs,
+  theme: value.theme,
+  fontSize: value.fontSize,
+  syncScroll: value.syncScroll,
+  templatesFolderId: value.templatesFolderId,
+});
+
 export const App: React.FC = () => {
   // Application Settings
   const [settings, setSettings] = useState<AppSettings>(() => {
@@ -195,6 +210,23 @@ export const App: React.FC = () => {
   // Editor Selection & View Mode
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("split");
+
+  // Zoom moves the shared text size for editor and preview together.
+  // It stays session-only: nothing derived from restored settings is
+  // written back to storage from here. The settings modal owns the
+  // persisted font size.
+  const handleZoomIn = useCallback(() => {
+    setSettings((prev) => ({
+      ...prev,
+      fontSize: Math.min(22, prev.fontSize + 1),
+    }));
+  }, []);
+  const handleZoomOut = useCallback(() => {
+    setSettings((prev) => ({
+      ...prev,
+      fontSize: Math.max(12, prev.fontSize - 1),
+    }));
+  }, []);
 
   // Suggestion mode: edits are recorded as a patch, not written to Drive.
   const [editingMode, setEditingMode] = useState<EditingMode>("edit");
@@ -1097,6 +1129,9 @@ export const App: React.FC = () => {
         onOpenTemplates={() => setIsTemplatesOpen(true)}
         onOpenGraph={() => setIsGraphOpen(true)}
         onPresent={() => setIsPresentOpen(true)}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        zoom={settings.fontSize}
         user={user}
         fileMetadata={fileMetadata}
         isDark={isDark}
@@ -1223,7 +1258,7 @@ export const App: React.FC = () => {
         {/* Markdown Live Preview Pane */}
         {(viewMode === "split" || viewMode === "preview") && (
           <div
-            className={`preview-container h-full overflow-hidden ${
+            className={`preview-container preview-canvas h-full overflow-hidden ${
               viewMode === "split" ? "w-1/2" : "w-full"
             }`}
           >
@@ -1232,6 +1267,7 @@ export const App: React.FC = () => {
               content={content}
               comments={comments}
               isDark={isDark}
+              fontSize={settings.fontSize}
               onScroll={handlePreviewScroll}
               onSelectComment={(id) => {
                 setIsCommentsOpen(true);
@@ -1371,7 +1407,7 @@ export const App: React.FC = () => {
           authService.setClientId(newSettings.googleClientId);
           localStorage.setItem(
             LOCAL_STORAGE_SETTINGS_KEY,
-            JSON.stringify(newSettings),
+            JSON.stringify(toPersistableSettings(newSettings)),
           );
         }}
       />

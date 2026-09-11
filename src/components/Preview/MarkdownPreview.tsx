@@ -21,6 +21,8 @@ interface MarkdownPreviewProps {
   content: string;
   comments?: DriveComment[];
   isDark: boolean;
+  /** Base text size; headings scale relative to it. */
+  fontSize?: number;
   onScroll?: (percentage: number) => void;
   onSelectComment?: (commentId: string) => void;
   onToggleTask?: (lineNumber: number, checked: boolean) => void;
@@ -59,6 +61,7 @@ export const MarkdownPreview = forwardRef<
       content,
       comments = [],
       isDark,
+      fontSize = 16,
       onScroll,
       onSelectComment,
       onToggleTask,
@@ -279,7 +282,8 @@ export const MarkdownPreview = forwardRef<
         ref={containerRef}
         onScroll={handleScroll}
         onClick={handleClick}
-        className="preview-pane w-full h-full overflow-y-auto px-8 py-6 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+        style={{ fontSize: `${fontSize}px` }}
+        className="preview-pane w-full h-full overflow-y-auto px-8 py-6 text-slate-800 dark:text-slate-100"
       >
         <div
           className="markdown-body max-w-4xl mx-auto"

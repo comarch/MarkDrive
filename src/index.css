@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Material 3 inspired shell tokens: soft surfaces, pill controls, and
+   a page-like canvas. Values stay in the existing slate/brand palette
+   so dark mode keeps working without new dependencies. */
+:root {
+  --mq-surface: #f8fafc;
+  --mq-surface-high: #ffffff;
+  --mq-surface-shadow:
+    0 1px 2px rgb(15 23 42 / 0.06), 0 4px 12px rgb(15 23 42 / 0.05);
+  --mq-canvas-shadow:
+    0 1px 3px rgb(15 23 42 / 0.08), 0 8px 24px rgb(15 23 42 / 0.06);
+}
+.dark {
+  --mq-surface: #0f172a;
+  --mq-surface-high: #1e293b;
+  --mq-surface-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
+  --mq-canvas-shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+/* Page-like centered canvas for the preview pane */
+.preview-canvas {
+  background: var(--mq-surface);
+}
+.preview-canvas .markdown-body {
+  background: var(--mq-surface-high);
+  border: 1px solid rgb(148 163 184 / 0.25);
+  border-radius: 12px;
+  box-shadow: var(--mq-canvas-shadow);
+  padding: 40px 56px;
+}
+
 @layer base {
   body {
     @apply antialiased select-none;
@@ -214,7 +244,6 @@ a.wikilink:hover {
   font-family:
     "JetBrains Mono", "Fira Code", Menlo, Monaco, Consolas, "Courier New",
     monospace !important;
-  font-size: 14px !important;
 }
 .cm-scroller {
   overflow: auto !important;
