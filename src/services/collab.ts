@@ -96,7 +96,10 @@ export const openCollabSession = (
     .replace(/\/$/, "")
     .replace(/^http:/, "ws:")
     .replace(/^https:/, "wss:");
-  const provider = new WebsocketProvider(wsUrl, `file-${fileId}`, doc, {
+  // y-websocket appends the room as a path segment, so the relay URL
+  // becomes <base>/ws/file-<id>: the companion maps that path form to
+  // the same rooms as the ?room= query.
+  const provider = new WebsocketProvider(`${wsUrl}/ws`, `file-${fileId}`, doc, {
     connect: true,
   });
   const awareness = provider.awareness;

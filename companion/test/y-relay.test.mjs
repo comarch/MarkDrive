@@ -21,11 +21,16 @@ const listen = (companion) =>
 
 const settle = (ms = 500) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// A minimal y-websocket client: enough protocol for the test.
-const makeClient = (port, room) => {
+// A minimal y-websocket client: enough protocol for the test. The
+// pathForm switch matches the URL y-websocket builds: /ws/<room>.
+const makeClient = (port, room, { pathForm = false } = {}) => {
   const doc = new Y.Doc();
   const awareness = new awarenessProtocol.Awareness(doc);
-  const ws = new WebSocket(`ws://127.0.0.1:${port}/ws?room=${room}`);
+  const ws = new WebSocket(
+    pathForm
+      ? `ws://127.0.0.1:${port}/ws/${encodeURIComponent(room)}`
+      : `ws://127.0.0.1:${port}/ws?room=${room}`,
+  );
   const opened = new Promise((resolve) => ws.once("open", resolve));
 
   const send = (bytes) => ws.send(bytes, { binary: true });
@@ -155,5 +160,28 @@ test("rooms are isolated from each other", async () => {
 
   one.close();
   other.close();
+  await companion.close();
+});
+
+test("the y-websocket path form /ws/<room> joins the same rooms", async () => {
+  const companion = createCompanion({});
+  const port = await listen(companion);
+  const room = "file-path-form";
+
+  const alice = makeClient(port, room, { pathForm: true });
+  const bob = makeClient(port, room, { pathForm: true });
+  await Promise.all([alice.opened, bob.opened]);
+  await settle();
+
+  alice.doc.getText("content").insert(0, "typed over the path form");
+  alice.publishUpdate();
+  await settle();
+  assert.equal(
+    bob.doc.getText("content").toString(),
+    "typed over the path form",
+  );
+
+  alice.close();
+  bob.close();
   await companion.close();
 });

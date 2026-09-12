@@ -216,13 +216,22 @@ export const createCompanion = (overrides = {}) => {
       req.url ?? "/",
       `http://${req.headers.host ?? "localhost"}`,
     );
-    const room = url.searchParams.get("room") ?? "";
+    // y-websocket addresses a room as /ws/<room>; the ?room= form stays
+    // supported for custom clients such as the event stream.
+    let room = url.searchParams.get("room") ?? "";
+    if (room.length === 0 && url.pathname.startsWith("/ws/")) {
+      try {
+        room = decodeURIComponent(url.pathname.slice(4));
+      } catch {
+        room = "";
+      }
+    }
     if (room.length === 0) {
       socket.destroy();
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
-      if (url.pathname === "/ws") {
+      if (url.pathname === "/ws" || url.pathname.startsWith("/ws/")) {
         // Binary CRDT and awareness relay for collaborative editing.
         setupWSConnection(ws, room, relayState, {
           onJoin: (joined) => audit.record("relay.join", { room: joined }),
