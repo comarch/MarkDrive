@@ -8,6 +8,9 @@ RUN npm ci
 
 COPY . .
 RUN npm run build
+# A checkout with a restrictive umask can produce unreadable assets;
+# every served file must be world-readable for the nginx worker.
+RUN find dist -type f -exec chmod a+r {} +
 
 # Production stage
 FROM nginx:1.31.5-alpine
