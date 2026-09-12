@@ -5,6 +5,13 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # The companion host is resolved per request so a deployment without
+    # the companion service still boots and answers 502 on its routes.
+    # 15-local-resolvers.envsh in the nginx image exports the resolver
+    # from this container's /etc/resolv.conf, so docker-compose, podman,
+    # and plain `docker run` all work without edits.
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+
     add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com; frame-src https://accounts.google.com; form-action 'self'" always;
     add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
     add_header Permissions-Policy "camera=(), geolocation=(), microphone=()" always;
@@ -28,13 +35,15 @@ server {
     # docker-compose.yml). Without it these routes answer 502 and every
     # core SPA feature keeps working.
     location /v1/ {
-        proxy_pass http://companion:8787;
+        set $companion_upstream http://companion:8787;
+        proxy_pass $companion_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
     location /ws {
-        proxy_pass http://companion:8787;
+        set $companion_upstream http://companion:8787;
+        proxy_pass $companion_upstream;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -42,7 +51,8 @@ server {
     }
 
     location /events {
-        proxy_pass http://companion:8787;
+        set $companion_upstream http://companion:8787;
+        proxy_pass $companion_upstream;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

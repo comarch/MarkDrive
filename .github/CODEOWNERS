@@ -6,7 +6,7 @@
 /docs/REPOSITORY_SETTINGS.md @mrwogu
 /docs/SECURITY_MODEL.md @mrwogu
 /Dockerfile @mrwogu
-/nginx.conf @mrwogu
+/nginx.conf.template @mrwogu
 /promptscript.yaml @mrwogu
 /.promptscript/ @mrwogu
 /.coderabbit.yaml @mrwogu

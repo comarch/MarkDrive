@@ -13,7 +13,13 @@ RUN npm run build
 FROM nginx:1.31.5-alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Rendered to conf.d/default.conf by the image entrypoint so the
+# companion resolver can be derived from the runtime resolv.conf.
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+
+# Opt in to the entrypoint script that exports NGINX_LOCAL_RESOLVERS
+# from resolv.conf for the template above.
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 
 EXPOSE 80
 
