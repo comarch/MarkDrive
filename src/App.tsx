@@ -70,6 +70,7 @@ import {
   parseLineAnchorFromUrl,
 } from "./services/driveState";
 import { SAMPLE_MARKDOWN } from "./utils/sampleDocument";
+import { persistDraft, readPersistedDraft } from "./utils/draft";
 import { safeGetItem, safeSetItem } from "./utils/safeStorage";
 import { toggleTaskLine } from "./utils/tasks";
 import { parseFrontmatter, updateFrontmatterField } from "./utils/frontmatter";
@@ -125,8 +126,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   companionUrl: "",
 };
 
-const LOCAL_STORAGE_CONTENT_KEY = "gdrive_md_last_content";
-const LOCAL_STORAGE_TITLE_KEY = "gdrive_md_last_title";
 const LOCAL_STORAGE_SETTINGS_KEY = "gdrive_md_settings";
 
 /**
@@ -240,10 +239,10 @@ export const App: React.FC = () => {
 
   // Document State
   const [documentTitle, setDocumentTitle] = useState<string>(() => {
-    return safeGetItem(LOCAL_STORAGE_TITLE_KEY) || "Welcome.md";
+    return readPersistedDraft("Welcome.md", SAMPLE_MARKDOWN).title;
   });
   const [content, setContent] = useState<string>(() => {
-    return safeGetItem(LOCAL_STORAGE_CONTENT_KEY) || SAMPLE_MARKDOWN;
+    return readPersistedDraft("Welcome.md", SAMPLE_MARKDOWN).content;
   });
   const [fileMetadata, setFileMetadata] = useState<DriveFileMetadata | null>(
     null,
@@ -820,7 +819,7 @@ export const App: React.FC = () => {
         );
         setFileMetadata((prev) => (prev ? { ...prev, ...updated } : updated));
         setContent(resolvedContent);
-        safeSetItem(LOCAL_STORAGE_CONTENT_KEY, resolvedContent);
+        persistDraft(documentTitle, resolvedContent);
         setLastSyncedContent(resolvedContent);
         setSaveStatus("saved");
       } catch (err) {
@@ -1041,11 +1040,8 @@ export const App: React.FC = () => {
     if (editingModeRef.current === "suggest") return;
 
     setSaveStatus("unsaved");
-    try {
-      localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, newContent);
-    } catch {
-      // Draft persistence is best effort; keep editing when the quota is full.
-    }
+    // Draft persistence is best effort; keep editing when the quota is full.
+    persistDraft(documentTitle, newContent);
 
     if (settings.autoSaveIntervalMs > 0) {
       if (autoSaveTimerRef.current) {
@@ -1187,7 +1183,7 @@ export const App: React.FC = () => {
   const handleTitleChange = async (newTitle: string) => {
     const formatted = newTitle.endsWith(".md") ? newTitle : `${newTitle}.md`;
     setDocumentTitle(formatted);
-    safeSetItem(LOCAL_STORAGE_TITLE_KEY, formatted);
+    persistDraft(formatted, content);
 
     if (fileMetadata) {
       try {
@@ -1265,7 +1261,7 @@ export const App: React.FC = () => {
       setDocumentTitle(newFile.name);
       setContent(expanded);
       setLastSyncedContent(expanded);
-      localStorage.setItem(LOCAL_STORAGE_CONTENT_KEY, expanded);
+      persistDraft(newFile.name, expanded);
       setSaveStatus("saved");
       updateUrlFileId(newFile.id);
       setSelectedCommentId(null);
