@@ -324,4 +324,6 @@ Contributions are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) and the
 
 ## License
 
+Author: Wojciech Guziak (Comarch S.A.).
+
 [MIT](./LICENSE)
